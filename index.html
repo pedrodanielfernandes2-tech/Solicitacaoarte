@@ -175,7 +175,7 @@ function getOrCreateFolder(nome) {
 
 // ── Envia email automático com resumo ──────────────────────
 function enviarEmail(p, rowNum, linksForotos) {
-  var assunto = '[VERSAO NOVA] - Nova Solicitação de Arte #' + rowNum + ' — ' + (p.nome_trabalho || 'Sem nome') + ' | ' + (p.congregacao || '');
+  var assunto = '[VERSAO NOVA] Nova Solicitação de Arte #' + rowNum + ' — ' + (p.nome_trabalho || 'Sem nome') + ' | ' + (p.congregacao || '');
 
   var fotosTexto = linksForotos.length > 0
     ? linksForotos.join('\n')
