@@ -241,7 +241,7 @@ select{cursor:pointer}
 <div id="toast"></div>
 
 <script>
-var GAS = 'https://script.google.com/macros/s/AKfycbxnMj6jt6R5O2kvjulKCiHjcHo6ZCl8urGC87hcbZ3KK8p1uAy75NHoIjoZd32uVpXAWA/exec';
+var GAS = 'https://script.google.com/macros/s/AKfycbwEdh8tDr1cHIUpCo2ScP0KCczXz5J9nQA3R0-zH-PnokQWhfB20CE-GXpvGHYkanjuog/exec';
 
 // ── Data de hoje ──
 (function(){
