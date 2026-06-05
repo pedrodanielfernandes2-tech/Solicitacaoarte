@@ -86,6 +86,39 @@ select{cursor:pointer}
 /* toast */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal);color:#fff;padding:10px 22px;border-radius:30px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:9999}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--teal);margin-bottom:0}
+.tab-btn{padding:12px 28px;font-family:Lato,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;background:var(--sur2);color:var(--tm);border-radius:8px 8px 0 0;margin-right:4px;transition:all .2s;border:1px solid var(--bor);border-bottom:none}
+.tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.tab-btn:hover:not(.active){background:var(--tbg);color:var(--td)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* histórico */
+.hist-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.hist-title{font-family:"Playfair Display",serif;font-size:16px;color:var(--td)}
+.hist-refresh{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-family:Lato,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .2s}
+.hist-refresh:hover{background:var(--td)}
+.hist-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.stat-card{flex:1;min-width:120px;background:var(--tbg);border:1px solid rgba(58,175,169,.25);border-radius:var(--r);padding:14px 18px;text-align:center}
+.stat-num{font-family:"Playfair Display",serif;font-size:28px;font-weight:700;color:var(--td)}
+.stat-lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tm);margin-top:4px}
+.hist-table{width:100%;border-collapse:collapse;font-size:13px}
+.hist-table th{background:var(--teal);color:#fff;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.hist-table td{padding:11px 14px;border-bottom:1px solid var(--bor);color:var(--tx);vertical-align:top}
+.hist-table tr:hover td{background:var(--tbg)}
+.hist-table tr:last-child td{border-bottom:none}
+.badge-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px}
+.badge-status.aguardando{background:#fff3cd;color:#7a5800}
+.badge-status.producao{background:#cce5ff;color:#004085}
+.badge-status.concluido{background:#d4edda;color:#155724}
+.badge-status.cancelado{background:#f8d7da;color:#721c24}
+.hist-empty{text-align:center;padding:48px 20px;color:var(--tm)}
+.hist-empty .hist-empty-icon{font-size:48px;margin-bottom:12px}
+.hist-loading{text-align:center;padding:48px 20px;color:var(--tm);font-size:14px}
+.hist-filter{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.hist-filter input{flex:1;min-width:180px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:8px 12px;font-family:Lato,sans-serif;font-size:13px;color:var(--tx);outline:none}
+.hist-filter input:focus{border-color:var(--teal)}
+.hist-filter select{background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:8px 12px;font-family:Lato,sans-serif;font-size:13px;color:var(--tx);cursor:pointer;outline:none}
 @media(max-width:580px){.fbody,.acts{padding:20px 16px}.row{grid-template-columns:1fr}.date-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -101,6 +134,15 @@ select{cursor:pointer}
     <button class="pok" onclick="document.getElementById('pop').classList.remove('on')">OK</button>
   </div>
 </div>
+
+<!-- tabs nav -->
+<div class="tabs" id="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('formulario')">📝 Nova Solicitação</button>
+  <button class="tab-btn" onclick="switchTab('historico')">📋 Histórico</button>
+</div>
+
+<!-- ── Tab Formulário ── -->
+<div class="tab-pane active" id="tab-formulario">
 
 <!-- banner -->
 <div class="banner">
@@ -237,11 +279,51 @@ select{cursor:pointer}
   <button class="btn btn-d" type="button" onclick="limpar()">🗑 Limpar</button>
 </div>
 
+</div><!-- tab formulario -->
+
+  <!-- ── Tab Histórico ── -->
+  <div class="tab-pane" id="tab-historico">
+    <div style="background:#fff;border:1px solid var(--bor);border-top:none;padding:28px 40px;border-radius:0 0 0 0">
+
+      <div class="hist-header">
+        <div class="hist-title">📋 Histórico de Solicitações</div>
+        <button class="hist-refresh" onclick="carregarHistorico()">🔄 Atualizar</button>
+      </div>
+
+      <div class="hist-stats" id="hist-stats">
+        <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-aguardando">—</div><div class="stat-lbl">Aguardando</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-producao">—</div><div class="stat-lbl">Em Produção</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-concluido">—</div><div class="stat-lbl">Concluídos</div></div>
+      </div>
+
+      <div class="hist-filter">
+        <input id="hist-busca" placeholder="🔍 Buscar por nome, solicitante…" oninput="filtrarHistorico()"/>
+        <select id="hist-status-filter" onchange="filtrarHistorico()">
+          <option value="">Todos os status</option>
+          <option value="Aguardando">Aguardando</option>
+          <option value="Em Produção">Em Produção</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+
+      <div id="hist-corpo">
+        <div class="hist-loading">⏳ Clique em Atualizar para carregar o histórico…</div>
+      </div>
+
+    </div>
+
+    <div class="acts" style="border-radius:0 0 10px 10px">
+      <button class="btn btn-p" type="button" onclick="switchTab('formulario')">✏️ Nova Solicitação</button>
+    </div>
+  </div><!-- /tab historico -->
+
 </div><!-- /wrap -->
 <div id="toast"></div>
 
 <script>
-var GAS = 'https://script.google.com/macros/s/AKfycbwEdh8tDr1cHIUpCo2ScP0KCczXz5J9nQA3R0-zH-PnokQWhfB20CE-GXpvGHYkanjuog/exec';
+var GAS = 'https://script.google.com/macros/s/AKfycbyMfZizh8_nmXlGcdWLMVD-jdo41WOqYy879Lh99yqWHsykh-RDnYdiMxrFQE8HFetxoQ/exec';
 
 // ── Data de hoje ──
 (function(){
@@ -589,6 +671,99 @@ function toast(msg,warn){
 
 // Init
 addData();
+
+// ── Tabs ──
+function switchTab(tab){
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    if(b.textContent.toLowerCase().indexOf(tab==='formulario'?'solicitação':'histórico')>=0) b.classList.add('active');
+  });
+  if(tab==='historico') carregarHistorico();
+}
+
+// ── Histórico ──
+var _histDados = [];
+
+function carregarHistorico(){
+  document.getElementById('hist-corpo').innerHTML='<div class="hist-loading">⏳ Carregando histórico…</div>';
+
+  fetch(GAS + '?action=historico', { method:'GET' })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.status==='ok'){
+      _histDados = data.rows || [];
+      atualizarStats(_histDados);
+      renderHistorico(_histDados);
+    } else {
+      document.getElementById('hist-corpo').innerHTML='<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro ao carregar: '+(data.msg||'desconhecido')+'</p></div>';
+    }
+  })
+  .catch(function(err){
+    document.getElementById('hist-corpo').innerHTML='<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Não foi possível carregar o histórico.<br>Verifique sua conexão e tente novamente.</p></div>';
+  });
+}
+
+function atualizarStats(rows){
+  document.getElementById('stat-total').textContent = rows.length;
+  document.getElementById('stat-aguardando').textContent = rows.filter(function(r){return (r.status||'Aguardando')==='Aguardando';}).length;
+  document.getElementById('stat-producao').textContent  = rows.filter(function(r){return r.status==='Em Produção';}).length;
+  document.getElementById('stat-concluido').textContent = rows.filter(function(r){return r.status==='Concluído';}).length;
+}
+
+function statusBadge(s){
+  var map={
+    'Aguardando':'aguardando',
+    'Em Produção':'producao',
+    'Concluído':'concluido',
+    'Cancelado':'cancelado'
+  };
+  var st = s || 'Aguardando';
+  var cls = map[st] || 'aguardando';
+  return '<span class="badge-status '+cls+'">'+st+'</span>';
+}
+
+function renderHistorico(rows){
+  if(!rows || rows.length===0){
+    document.getElementById('hist-corpo').innerHTML=
+      '<div class="hist-empty"><div class="hist-empty-icon">📭</div><p>Nenhuma solicitação encontrada.</p></div>';
+    return;
+  }
+  var html='<div style="overflow-x:auto"><table class="hist-table">'+
+    '<thead><tr>'+
+    '<th>#</th>'+
+    '<th>Data Solicitação</th>'+
+    '<th>Solicitante</th>'+
+    '<th>Nome do Trabalho</th>'+
+    '<th>Status</th>'+
+    '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html+='<tr>'+
+      '<td style="color:var(--tm);font-size:12px">'+( r.num||'—')+'</td>'+
+      '<td style="white-space:nowrap">'+( r.data_solicitacao||'—')+'</td>'+
+      '<td>'+(r.solicitante||'—')+'</td>'+
+      '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
+      '<td>'+statusBadge(r.status)+'</td>'+
+      '</tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('hist-corpo').innerHTML=html;
+}
+
+function filtrarHistorico(){
+  var busca = document.getElementById('hist-busca').value.toLowerCase();
+  var statusF = document.getElementById('hist-status-filter').value;
+  var filtrado = _histDados.filter(function(r){
+    var matchBusca = !busca ||
+      (r.nome_trabalho||'').toLowerCase().indexOf(busca)>=0 ||
+      (r.solicitante||'').toLowerCase().indexOf(busca)>=0 ||
+      (r.data_solicitacao||'').toLowerCase().indexOf(busca)>=0;
+    var matchStatus = !statusF || (r.status||'Aguardando')===statusF;
+    return matchBusca && matchStatus;
+  });
+  renderHistorico(filtrado);
+}
 </script>
 </body>
 </html>
