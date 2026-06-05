@@ -689,20 +689,55 @@ var _histDados = [];
 function carregarHistorico(){
   document.getElementById('hist-corpo').innerHTML='<div class="hist-loading">⏳ Carregando histórico…</div>';
 
-  fetch(GAS + '?action=historico', { method:'GET' })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    if(data.status==='ok'){
+  // Remove script anterior se existir
+  var old = document.getElementById('jsonp-script');
+  if(old) old.remove();
+
+  // Callback global que o GAS vai chamar
+  window._gasCallback = function(data){
+    var old2 = document.getElementById('jsonp-script');
+    if(old2) old2.remove();
+    if(data && data.status==='ok'){
       _histDados = data.rows || [];
       atualizarStats(_histDados);
       renderHistorico(_histDados);
     } else {
-      document.getElementById('hist-corpo').innerHTML='<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro ao carregar: '+(data.msg||'desconhecido')+'</p></div>';
+      document.getElementById('hist-corpo').innerHTML=
+        '<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro ao carregar: '+((data&&data.msg)||'desconhecido')+'</p></div>';
     }
-  })
-  .catch(function(err){
-    document.getElementById('hist-corpo').innerHTML='<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Não foi possível carregar o histórico.<br>Verifique sua conexão e tente novamente.</p></div>';
-  });
+  };
+
+  // Timeout de segurança (5s)
+  var timer = setTimeout(function(){
+    var s = document.getElementById('jsonp-script');
+    if(s) s.remove();
+    document.getElementById('hist-corpo').innerHTML=
+      '<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Tempo esgotado ao carregar o histórico.<br>Verifique se o Apps Script foi reimplantado e tente novamente.</p></div>';
+  }, 5000);
+
+  window._gasCallback = function(data){
+    clearTimeout(timer);
+    var s = document.getElementById('jsonp-script');
+    if(s) s.remove();
+    if(data && data.status==='ok'){
+      _histDados = data.rows || [];
+      atualizarStats(_histDados);
+      renderHistorico(_histDados);
+    } else {
+      document.getElementById('hist-corpo').innerHTML=
+        '<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro: '+((data&&data.msg)||'desconhecido')+'</p></div>';
+    }
+  };
+
+  var script = document.createElement('script');
+  script.id  = 'jsonp-script';
+  script.src = GAS + '?action=historico&callback=_gasCallback&t=' + Date.now();
+  script.onerror = function(){
+    clearTimeout(timer);
+    document.getElementById('hist-corpo').innerHTML=
+      '<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Não foi possível carregar o histórico.<br>Reimplante o Apps Script e tente novamente.</p></div>';
+  };
+  document.body.appendChild(script);
 }
 
 function atualizarStats(rows){
