@@ -323,7 +323,7 @@ select{cursor:pointer}
 <div id="toast"></div>
 
 <script>
-var GAS = 'https://script.google.com/macros/s/AKfycbyMfZizh8_nmXlGcdWLMVD-jdo41WOqYy879Lh99yqWHsykh-RDnYdiMxrFQE8HFetxoQ/exec';
+var GAS = 'https://script.google.com/macros/s/AKfycbwEdh8tDr1cHIUpCo2ScP0KCczXz5J9nQA3R0-zH-PnokQWhfB20CE-GXpvGHYkanjuog/exec';
 
 // ── Data de hoje ──
 (function(){
