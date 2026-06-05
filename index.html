@@ -689,35 +689,22 @@ var _histDados = [];
 function carregarHistorico(){
   document.getElementById('hist-corpo').innerHTML='<div class="hist-loading">⏳ Carregando histórico…</div>';
 
-  // Remove script anterior se existir
-  var old = document.getElementById('jsonp-script');
-  if(old) old.remove();
+  // Limpa callback anterior
+  var oldS = document.getElementById('jsonp-hist');
+  if(oldS) oldS.remove();
 
-  // Callback global que o GAS vai chamar
-  window._gasCallback = function(data){
-    var old2 = document.getElementById('jsonp-script');
-    if(old2) old2.remove();
-    if(data && data.status==='ok'){
-      _histDados = data.rows || [];
-      atualizarStats(_histDados);
-      renderHistorico(_histDados);
-    } else {
-      document.getElementById('hist-corpo').innerHTML=
-        '<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro ao carregar: '+((data&&data.msg)||'desconhecido')+'</p></div>';
-    }
-  };
-
-  // Timeout de segurança (5s)
+  // Callback global
   var timer = setTimeout(function(){
-    var s = document.getElementById('jsonp-script');
+    var s=document.getElementById('jsonp-hist');
     if(s) s.remove();
     document.getElementById('hist-corpo').innerHTML=
-      '<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Tempo esgotado ao carregar o histórico.<br>Verifique se o Apps Script foi reimplantado e tente novamente.</p></div>';
-  }, 5000);
+      '<div class="hist-empty"><div class="hist-empty-icon">⏱️</div>'+
+      '<p>Tempo esgotado. Verifique se o Apps Script foi reimplantado com a versão mais recente e tente novamente.</p></div>';
+  }, 8000);
 
-  window._gasCallback = function(data){
+  window._gasHist = function(data){
     clearTimeout(timer);
-    var s = document.getElementById('jsonp-script');
+    var s=document.getElementById('jsonp-hist');
     if(s) s.remove();
     if(data && data.status==='ok'){
       _histDados = data.rows || [];
@@ -725,19 +712,22 @@ function carregarHistorico(){
       renderHistorico(_histDados);
     } else {
       document.getElementById('hist-corpo').innerHTML=
-        '<div class="hist-empty"><div class="hist-empty-icon">⚠️</div><p>Erro: '+((data&&data.msg)||'desconhecido')+'</p></div>';
+        '<div class="hist-empty"><div class="hist-empty-icon">⚠️</div>'+
+        '<p>Erro: '+((data&&data.msg)||'Resposta inválida do servidor.')+'</p></div>';
     }
   };
 
-  var script = document.createElement('script');
-  script.id  = 'jsonp-script';
-  script.src = GAS + '?action=historico&callback=_gasCallback&t=' + Date.now();
-  script.onerror = function(){
+  var s = document.createElement('script');
+  s.id  = 'jsonp-hist';
+  // Força o GAS a redirecionar corretamente com o parâmetro no URL final
+  s.src = GAS + '?action=historico&callback=_gasHist&nocache=' + Date.now();
+  s.onerror = function(){
     clearTimeout(timer);
     document.getElementById('hist-corpo').innerHTML=
-      '<div class="hist-empty"><div class="hist-empty-icon">📡</div><p>Não foi possível carregar o histórico.<br>Reimplante o Apps Script e tente novamente.</p></div>';
+      '<div class="hist-empty"><div class="hist-empty-icon">📡</div>'+
+      '<p>Erro de rede ao carregar o histórico.<br>Reimplante o Apps Script (Nova versão) e tente novamente.</p></div>';
   };
-  document.body.appendChild(script);
+  document.head.appendChild(s);
 }
 
 function atualizarStats(rows){
