@@ -98,10 +98,10 @@ select{cursor:pointer}
 .hist-title{font-family:"Playfair Display",serif;font-size:16px;color:var(--td)}
 .hist-refresh{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-family:Lato,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .2s}
 .hist-refresh:hover{background:var(--td)}
-.hist-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.stat-card{flex:1;min-width:120px;background:var(--tbg);border:1px solid rgba(58,175,169,.25);border-radius:var(--r);padding:14px 18px;text-align:center}
-.stat-num{font-family:"Playfair Display",serif;font-size:28px;font-weight:700;color:var(--td)}
-.stat-lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tm);margin-top:4px}
+.hist-stats{display:flex;gap:8px;flex-wrap:nowrap;margin-bottom:20px;overflow-x:auto}
+.stat-card{flex:1;min-width:80px;background:var(--tbg);border:1px solid rgba(58,175,169,.25);border-radius:var(--r);padding:12px 8px;text-align:center}
+.stat-num{font-family:"Playfair Display",serif;font-size:22px;font-weight:700;color:var(--td)}
+.stat-lbl{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tm);margin-top:4px;text-align:center}
 .hist-table{width:100%;border-collapse:collapse;font-size:13px}
 .hist-table th{background:var(--teal);color:#fff;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .hist-table td{padding:11px 14px;border-bottom:1px solid var(--bor);color:var(--tx);vertical-align:top}
@@ -110,7 +110,10 @@ select{cursor:pointer}
 .badge-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px}
 .badge-status.aguardando{background:#fff3cd;color:#7a5800}
 .badge-status.producao{background:#cce5ff;color:#004085}
-.badge-status.concluido{background:#d4edda;color:#155724}
+.badge-status.concluido{background:#1a4a8a;color:#fff}
+.badge-status.entregue{background:#1a6e3a;color:#fff}
+.badge-status.revisao{background:#6a1fa0;color:#fff}
+.badge-status.analise{background:#b39ddb;color:#311b6b}
 .badge-status.cancelado{background:#f8d7da;color:#721c24}
 .hist-empty{text-align:center;padding:48px 20px;color:var(--tm)}
 .hist-empty .hist-empty-icon{font-size:48px;margin-bottom:12px}
@@ -292,9 +295,12 @@ select{cursor:pointer}
 
       <div class="hist-stats" id="hist-stats">
         <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-aguardando">—</div><div class="stat-lbl">Aguardando</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-producao">—</div><div class="stat-lbl">Em Produção</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-concluido">—</div><div class="stat-lbl">Concluídos</div></div>
+        <div class="stat-card" style="border-top:3px solid #f0c030"><div class="stat-num" id="stat-aguardando" style="color:#7a5800">—</div><div class="stat-lbl">Aguardando</div></div>
+        <div class="stat-card" style="border-top:3px solid #5b9bd5"><div class="stat-num" id="stat-producao" style="color:#004085">—</div><div class="stat-lbl">Em Produção</div></div>
+        <div class="stat-card" style="border-top:3px solid #b39ddb"><div class="stat-num" id="stat-analise" style="color:#311b6b">—</div><div class="stat-lbl">Em Analise</div></div>
+        <div class="stat-card" style="border-top:3px solid #6a1fa0"><div class="stat-num" id="stat-revisao" style="color:#6a1fa0">—</div><div class="stat-lbl">Revisão</div></div>
+        <div class="stat-card" style="border-top:3px solid #1a6e3a"><div class="stat-num" id="stat-entregue" style="color:#1a6e3a">—</div><div class="stat-lbl">Entregue</div></div>
+        <div class="stat-card" style="border-top:3px solid #1a4a8a"><div class="stat-num" id="stat-concluido" style="color:#1a4a8a">—</div><div class="stat-lbl">Concluído</div></div>
       </div>
 
       <div class="hist-filter">
@@ -303,8 +309,10 @@ select{cursor:pointer}
           <option value="">Todos os status</option>
           <option value="Aguardando">Aguardando</option>
           <option value="Em Produção">Em Produção</option>
-          <option value="Concluído">Concluído</option>
-          <option value="Cancelado">Cancelado</option>
+          <option value="Em Analise">Em Analise</option>
+          <option value="Revisão">Revisão</option>
+          <option value="Entregue">Entregue</option>
+          <option value="Concluido">Concluído</option>
         </select>
       </div>
 
@@ -661,6 +669,21 @@ function limpar(){
 
 function fmtDate(d){if(!d)return'';var p=d.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d;}
 
+function fmtDataHist(v){
+  if(!v||v.trim()==='') return '—';
+  // Já está no formato DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())) return v.trim();
+  // Tenta converter Date object string (ex: "Fri Jun 05 2026 00:00:00...")
+  var d = new Date(v);
+  if(!isNaN(d.getTime())){
+    var dd  = String(d.getDate()).padStart(2,'0');
+    var mo  = String(d.getMonth()+1).padStart(2,'0');
+    var yy  = d.getFullYear();
+    return dd+'/'+mo+'/'+yy;
+  }
+  return v;
+}
+
 function toast(msg,warn){
   var t=document.getElementById('toast');
   t.textContent=msg;
@@ -731,20 +754,28 @@ function carregarHistorico(){
 }
 
 function atualizarStats(rows){
-  document.getElementById('stat-total').textContent = rows.length;
-  document.getElementById('stat-aguardando').textContent = rows.filter(function(r){return (r.status||'Aguardando')==='Aguardando';}).length;
-  document.getElementById('stat-producao').textContent  = rows.filter(function(r){return r.status==='Em Produção';}).length;
-  document.getElementById('stat-concluido').textContent = rows.filter(function(r){return r.status==='Concluído';}).length;
+  function cnt(st){ return rows.filter(function(r){ return (r.status||'Aguardando')===st; }).length; }
+  document.getElementById('stat-total').textContent      = rows.length;
+  document.getElementById('stat-aguardando').textContent = cnt('Aguardando');
+  document.getElementById('stat-producao').textContent   = cnt('Em Produção');
+  document.getElementById('stat-analise').textContent    = cnt('Em Analise');
+  document.getElementById('stat-revisao').textContent    = cnt('Revisão');
+  document.getElementById('stat-entregue').textContent   = cnt('Entregue');
+  document.getElementById('stat-concluido').textContent  = cnt('Concluido') + cnt('Concluído');
 }
 
 function statusBadge(s){
   var map={
-    'Aguardando':'aguardando',
+    'Aguardando' :'aguardando',
     'Em Produção':'producao',
-    'Concluído':'concluido',
-    'Cancelado':'cancelado'
+    'Em Analise' :'analise',
+    'Revisão'    :'revisao',
+    'Entregue'   :'entregue',
+    'Concluido'  :'concluido',
+    'Concluído'  :'concluido',
+    'Cancelado'  :'cancelado'
   };
-  var st = s || 'Aguardando';
+  var st  = s || 'Aguardando';
   var cls = map[st] || 'aguardando';
   return '<span class="badge-status '+cls+'">'+st+'</span>';
 }
@@ -765,8 +796,8 @@ function renderHistorico(rows){
     '</tr></thead><tbody>';
   rows.forEach(function(r){
     html+='<tr>'+
-      '<td style="color:var(--tm);font-size:12px">'+( r.num||'—')+'</td>'+
-      '<td style="white-space:nowrap">'+( r.data_solicitacao||'—')+'</td>'+
+      '<td style="color:var(--tm);font-size:12px">'+(r.num||'—')+'</td>'+
+      '<td style="white-space:nowrap">'+fmtDataHist(r.data_solicitacao)+'</td>'+
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td>'+statusBadge(r.status)+'</td>'+
