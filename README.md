@@ -331,7 +331,8 @@ select{cursor:pointer}
 <div id="toast"></div>
 
 <script>
-var GAS = 'https://script.google.com/macros/s/AKfycbwEdh8tDr1cHIUpCo2ScP0KCczXz5J9nQA3R0-zH-PnokQWhfB20CE-GXpvGHYkanjuog/exec';
+var SUPA_URL = 'https://tcvqkkgirxdarldhdeoz.supabase.co';
+var SUPA_KEY = 'sb_publishable_GO8wtvQaIp2jO_2wD342zw_rHU7v4jM';
 
 // ── Data de hoje ──
 (function(){
@@ -710,13 +711,326 @@ function switchTab(tab){
 var _histDados = [];
 
 function carregarHistorico(){
+  document.getElementById('hist-corpo').innerHTML = '<div class="hist-loading">⏳ Carregando histórico…</div>';
+
+  fetch(SUPA_URL + '/rest/v1/solicitacoes?select=id,num,data_solic,congregacao,solicitante,nome_trabalho,status&order=id.desc', {
+    headers: {
+      'apikey':         SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY
+    }
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(rows){
+    _histDados = rows.map(function(r){
+      return {
+        num:              String(r.num || r.id || ''),
+        data_solicitacao: r.data_solic || '',
+        congregacao:      r.congregacao || '',
+        solicitante:      r.solicitante || '',
+        nome_trabalho:    r.nome_trabalho || '',
+        status:           r.status || 'Aguardando'
+      };
+    });
+    atualizarStats(_histDados);
+    renderHistorico(_histDados);
+  })
+  .catch(function(err){
+    console.error('Historico error:', err);
+    document.getElementById('hist-corpo').innerHTML =
+      '<div class="hist-empty"><div class="hist-empty-icon">📡</div>' +
+      '<p>Não foi possível carregar o histórico.<br>' + err.message + '</p></div>';
+  });
+}
+
+function atualizarStats(rows){
+  function cnt(st){ return rows.filter(function(r){ return (r.status||'Aguardando')===st; }).length; }
+  document.getElementById('stat-total').textContent      = rows.length;
+  document.getElementById('stat-aguardando').textContent = cnt('Aguardando');
+  document.getElementById('stat-producao').textContent   = cnt('Em Produção');
+  document.getElementById('stat-analise').textContent    = cnt('Em Analise');
+  document.getElementById('stat-revisao').textContent    = cnt('Revisão');
+  document.getElementById('stat-entregue').textContent   = cnt('Entregue');
+  document.getElementById('stat-concluido').textContent  = cnt('Concluido') + cnt('Concluído');
+}
+
+function statusBadge(s){
+  var map={
+    'Aguardando' :'aguardando',
+    'Em Produção':'producao',
+    'Em Analise' :'analise',
+    'Revisão'    :'revisao',
+    'Entregue'   :'entregue',
+    'Concluido'  :'concluido',
+    'Concluído'  :'concluido',
+    'Cancelado'  :'cancelado'
+  };
+  var st  = s || 'Aguardando';
+  var cls = map[st] || 'aguardando';
+  return '<span class="badge-status '+cls+'">'+st+'</span>';
+}
+
+function renderHistorico(rows){
+  if(!rows || rows.length===0){
+    document.getElementById('hist-corpo').innerHTML=
+      '<div class="hist-empty"><div class="hist-empty-icon">📭</div><p>Nenhuma solicitação encontrada.</p></div>';
+    return;
+  }
+  var html='<div style="overflow-x:auto"><table class="hist-table">'+
+    '<thead><tr>'+
+    '<th>#</th>'+
+    '<th>Data Solicitação</th>'+
+    '<th>Solicitante</th>'+
+    '<th>Nome do Trabalho</th>'+
+    '<th>Status</th>'+
+    '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html+='<tr>'+
+      '<td style="color:var(--tm);font-size:12px">'+(r.num||'—')+'</td>'+
+      '<td style="white-space:nowrap">'+fmtDataHist(r.data_solicitacao)+'</td>'+
+      '<td>'+(r.solicitante||'—')+'</td>'+
+      '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
+      '<td>'+statusBadge(r.status)+'</td>'+
+      '</tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('hist-corpo').innerHTML=html;
+}
+
+function filtrarHistorico(){
+  var busca = document.getElementById('hist-busca').value.toLowerCase();
+  var statusF = document.getElementById('hist-status-filter').value;
+  var filtrado = _histDados.filter(function(r){
+    var matchBusca = !busca ||
+      (r.nome_trabalho||'').toLowerCase().indexOf(busca)>=0 ||
+      (r.solicitante||'').toLowerCase().indexOf(busca)>=0 ||
+      (r.data_solicitacao||'').toLowerCase().indexOf(busca)>=0;
+    var matchStatus = !statusF || (r.status||'Aguardando')===statusF;
+    return matchBusca && matchStatus;
+  });
+  renderHistorico(filtrado);
+}
+</script>
+</body>
+</html// ── Enviar Formulário → Supabase ──
+function enviar(){
+  var cong     = document.getElementById('congregacao').value;
+  var solit    = document.getElementById('solicitante').value.trim();
+  var dsol     = document.getElementById('data-sol').value;
+  var nome     = document.getElementById('nome-trab').value.trim();
+  var localV   = document.getElementById('local').value;
+  var localF   = localV === 'OUTROS'
+    ? (document.getElementById('outros-inp').value.trim() || 'Outros')
+    : localV;
+  var tema     = document.getElementById('tema').value.trim();
+  var ref      = document.getElementById('ref').value.trim();
+  var mais     = document.getElementById('mais-info').value.trim();
+  var obs      = document.getElementById('obs').value.trim();
+  var corVal   = document.getElementById('cores-hid').value;
+
+  if(!cong || !nome || !localV){
+    toast('Preencha Congregação, Nome do Evento e Local.', true); return;
+  }
+
+  var datas = [];
+  document.querySelectorAll('.date-row').forEach(function(r, i){
+    datas.push('Data '+(i+1)+': '+(fmtDate(r.querySelector('.c-data').value)||'—')+' | '+(r.querySelector('.c-hora').value||'—'));
+  });
+
+  var pregs = [];
+  document.querySelectorAll('.pb').forEach(function(b, i){
+    var m  = b.querySelector('.cm') ? b.querySelector('.cm').value.trim() : '—';
+    var fp = b.querySelector('input[name="fp'+i+'"]:checked');
+    var ft = fp ? (fp.value==='sim' ? 'Sim' : 'Não') : '—';
+    pregs.push('Pregador '+(i+1)+': '+m+' | Foto: '+ft);
+  });
+
+  var payload = {
+    data_solic:    dsol,
+    congregacao:   cong,
+    solicitante:   solit,
+    nome_trabalho: nome,
+    local:         localF,
+    tema:          tema,
+    referencia:    ref,
+    datas:         datas.join(' || '),
+    pregadores:    pregs.join(' || '),
+    paleta_cores:  corVal,
+    mais_info:     mais,
+    observacoes:   obs,
+    status:        'Aguardando'
+  };
+
+  var btn = document.querySelector('.btn-send');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+  toast('Enviando solicitação...');
+
+  fetch(SUPA_URL + '/rest/v1/solicitacoes', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':         SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Prefer':        'return=representation'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(data){
+    // Atualiza o número sequencial
+    var newId = data[0] ? data[0].id : '';
+    if(newId){
+      fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + newId, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':         SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY
+        },
+        body: JSON.stringify({ num: newId })
+      });
+    }
+    if(btn){ btn.disabled = false; btn.textContent = '📨 Enviar Formulário'; }
+    document.getElementById('pop').classList.add('on');
+  })
+  .catch(function(err){
+    console.error('Supabase error:', err);
+    toast('Erro ao enviar: ' + err.message, true);
+    if(btn){ btn.disabled = false; btn.textContent = '📨 Enviar Formulário'; }
+  });
+}
+
+
+// ── PDF — constrói clone limpo fora do viewport ──
+function gerarPDF(){
+  toast('Gerando PDF...');
+
+  var acts=document.querySelector('.acts');
+  var pop =document.getElementById('pop');
+  acts.style.display='none';
+  if(pop) pop.style.display='none';
+
+  var src=document.getElementById('main-wrap');
+
+  html2canvas(src,{
+    scale:2,
+    useCORS:true,
+    backgroundColor:'#f0f4f7',
+    logging:false,
+    windowWidth:src.scrollWidth,
+    windowHeight:src.scrollHeight,
+    x:0,y:0,
+    scrollX:0,scrollY:0
+  }).then(function(canvas){
+    var imgData=canvas.toDataURL('image/jpeg',0.92);
+    var pdf=new jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    var pw=pdf.internal.pageSize.getWidth();
+    var ph=pdf.internal.pageSize.getHeight();
+    var ratio=canvas.width/canvas.height;
+    var imgW=pw;
+    var imgH=pw/ratio;
+    var pos=0;
+    // Se maior que uma página, adiciona páginas
+    if(imgH<=ph){
+      pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);
+    } else {
+      var remaining=imgH;
+      var yOffset=0;
+      while(remaining>0){
+        var sliceH=Math.min(ph,remaining);
+        var srcY=yOffset*(canvas.height/imgH);
+        var srcH=sliceH*(canvas.height/imgH);
+        var sliceCanvas=document.createElement('canvas');
+        sliceCanvas.width=canvas.width;
+        sliceCanvas.height=srcH;
+        var ctx=sliceCanvas.getContext('2d');
+        ctx.drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
+        var sliceData=sliceCanvas.toDataURL('image/jpeg',0.92);
+        if(yOffset>0) pdf.addPage();
+        pdf.addImage(sliceData,'JPEG',0,0,imgW,sliceH);
+        remaining-=ph;
+        yOffset+=ph;
+      }
+    }
+    pdf.save('Solicitacao-Arte-ADLouveira.pdf');
+    acts.style.display='';
+    if(pop) pop.style.display='';
+    toast('PDF exportado com sucesso! ✓');
+  }).catch(function(err){
+    console.error(err);
+    acts.style.display='';
+    if(pop) pop.style.display='';
+    toast('Erro ao gerar PDF.',true);
+  });
+}
+
+// ── Limpar ──
+function limpar(){
+  if(!confirm('Deseja realmente limpar todos os campos?')) return;
+  ['congregacao','local','nome-trab','tema','ref','mais-info','obs','solicitante']
+    .forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('outros-sec').style.display='none';
+  document.getElementById('outros-inp').value='';
+  document.getElementById('datas-cont').innerHTML='';
+  numDatas=0; fMap={}; paletaFiles=[];
+  renderPvPaleta();
+  document.getElementById('pv-paleta').innerHTML='';
+  addData();
+  toast('Formulário limpo ✓');
+}
+
+function fmtDate(d){if(!d)return'';var p=d.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d;}
+
+function fmtDataHist(v){
+  if(!v||v.trim()==='') return '—';
+  // Já está no formato DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())) return v.trim();
+  // Tenta converter Date object string (ex: "Fri Jun 05 2026 00:00:00...")
+  var d = new Date(v);
+  if(!isNaN(d.getTime())){
+    var dd  = String(d.getDate()).padStart(2,'0');
+    var mo  = String(d.getMonth()+1).padStart(2,'0');
+    var yy  = d.getFullYear();
+    return dd+'/'+mo+'/'+yy;
+  }
+  return v;
+}
+
+function toast(msg,warn){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=warn?'#e08a2a':'#3aafa9';
+  t.classList.add('on');
+  setTimeout(function(){t.classList.remove('on');},3200);
+}
+
+// Init
+addData();
+
+// ── Tabs ──
+function switchTab(tab){
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    if(b.textContent.toLowerCase().indexOf(tab==='formulario'?'solicitação':'histórico')>=0) b.classList.add('active');
+  });
+  if(tab==='historico') carregarHistorico();
+}
+
+// ── Histórico ──
+var _histDados = [];
+
+function carregarHistorico(){
   document.getElementById('hist-corpo').innerHTML='<div class="hist-loading">⏳ Carregando histórico…</div>';
 
   // Limpa callback anterior
-  var oldS = document.getElementById('jsonp-hist');
-  if(oldS) oldS.remove();
-
-  // Callback global
+// Callback global
   var timer = setTimeout(function(){
     var s=document.getElementById('jsonp-hist');
     if(s) s.remove();
