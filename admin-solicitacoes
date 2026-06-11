@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin — AD Louveira</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--teal:#3aafa9;--td:#267d79;--tl:#60c8c3;--tbg:rgba(58,175,169,.08);--tx:#1b2d35;--tm:#577080;--bor:#cdd6de;--sur:#fff;--sur2:#f2f5f8;--r:7px;--acc:#e05555}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f4f7;font-family:Lato,sans-serif;color:var(--tx);min-height:100vh}
+/* ── Login ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#e8f7f6 0%,#f0f4f7 100%)}
+.login-box{background:#fff;border-radius:14px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 12px 48px rgba(58,175,169,.15)}
+.login-header{text-align:center;margin-bottom:28px}
+.login-icon{width:64px;height:64px;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px}
+.login-title{font-family:"Playfair Display",serif;font-size:22px;color:var(--td);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--tm);letter-spacing:1px;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tm)}
+.field input{background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:11px 14px;font-size:14px;font-family:Lato,sans-serif;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(58,175,169,.15)}
+.btn-login{width:100%;background:var(--teal);color:#fff;border:none;border-radius:var(--r);padding:13px;font-family:Lato,sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .2s;margin-top:6px}
+.btn-login:hover{background:var(--td)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed}
+.err{color:#c04040;font-size:13px;text-align:center;margin-top:10px;padding:8px;background:#fdecea;border-radius:var(--r);display:none}
+/* ── Layout admin ── */
+.admin{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1b2d35;padding:24px 0;display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:0 20px 24px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo-title{font-family:"Playfair Display",serif;font-size:15px;color:#fff;line-height:1.3}
+.sidebar-logo-sub{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.nav{flex:1;padding:16px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.7);font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(58,175,169,.15);color:var(--tl);border-left-color:var(--teal)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-user{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)}
+.sidebar-user-name{font-size:13px;color:#fff;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-user-role{font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px}
+.btn-logout{margin-top:10px;width:100%;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.2);color:#fff}
+.main{margin-left:220px;padding:28px;min-height:100vh}
+.page{display:none}
+.page.active{display:block}
+.page-title{font-family:"Playfair Display",serif;font-size:22px;color:var(--td);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+/* ── Stats ── */
+.stats{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:24px}
+.sc{flex:1;min-width:90px;background:#fff;border:1px solid var(--bor);border-radius:var(--r);padding:14px 10px;text-align:center}
+.sc-num{font-family:"Playfair Display",serif;font-size:24px;font-weight:700;color:var(--td)}
+.sc-lbl{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tm);margin-top:4px}
+/* ── Toolbar ── */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.toolbar input,.toolbar select{background:#fff;border:1px solid var(--bor);border-radius:var(--r);padding:9px 14px;font-size:13px;font-family:Lato,sans-serif;outline:none}
+.toolbar input{flex:1;min-width:200px}
+.toolbar input:focus{border-color:var(--teal)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-family:Lato,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
+.btn-p{background:var(--teal);color:#fff}
+.btn-p:hover{background:var(--td)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-danger{background:transparent;color:var(--acc);border:1px solid #f5c0c0}
+.btn-danger:hover{background:#fdecea}
+/* ── Table ── */
+.card{background:#fff;border-radius:10px;border:1px solid var(--bor);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--teal);color:#fff;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--bor);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--tbg)}
+/* ── Status badge/select ── */
+.st-sel{border:1px solid var(--bor);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;outline:none;font-family:Lato,sans-serif}
+.st-sel.aguardando{background:#fff3cd;color:#7a5800;border-color:#f0c030}
+.st-sel.producao{background:#cce5ff;color:#004085;border-color:#5b9bd5}
+.st-sel.analise{background:#e8d5f5;color:#311b6b;border-color:#b39ddb}
+.st-sel.revisao{background:#6a1fa0;color:#fff;border-color:#6a1fa0}
+.st-sel.entregue{background:#1a6e3a;color:#fff;border-color:#1a6e3a}
+.st-sel.concluido{background:#1a4a8a;color:#fff;border-color:#1a4a8a}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.admin{background:#1b2d35;color:#fff}
+.badge.designer{background:var(--tbg);color:var(--td);border:1px solid var(--tl)}
+.badge.ativo{background:#d4edda;color:#155724}
+.badge.inativo{background:#f8d7da;color:#721c24}
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;padding:20px}
+.overlay.on{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:scale(.95);transition:transform .25s}
+.overlay.on .modal{transform:scale(1)}
+.modal-hdr{background:var(--teal);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1}
+.modal-hdr h2{font-family:"Playfair Display",serif;font-size:17px;color:#fff}
+.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer}
+.modal-body{padding:24px}
+.det-row{display:flex;gap:12px;margin-bottom:11px;padding-bottom:11px;border-bottom:1px solid var(--bor)}
+.det-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.det-lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tm);min-width:140px;padding-top:2px;flex-shrink:0}
+.det-val{font-size:14px;color:var(--tx);flex:1;line-height:1.5}
+/* ── Auditoria ── */
+.audit-item{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--bor)}
+.audit-item:last-child{border-bottom:none}
+.audit-dot{width:10px;height:10px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:4px}
+.audit-info{flex:1}
+.audit-msg{font-size:13px;color:var(--tx)}
+.audit-time{font-size:11px;color:var(--tm);margin-top:2px}
+/* ── Form usuarios ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}}
+/* ── Empty/Loading ── */
+.empty,.loading{text-align:center;padding:48px;color:var(--tm)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--teal);color:#fff;padding:10px 20px;border-radius:var(--r);font-weight:700;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:9999;transform:translateY(10px)}
+#toast.on{opacity:1;transform:translateY(0)}
+#toast.err{background:#c04040}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-header">
+      <div class="login-icon">⛪</div>
+      <div class="login-title">AD Louveira</div>
+      <div class="login-sub">Painel Administrativo</div>
+    </div>
+    <div class="field"><label>E-mail</label>
+      <input type="email" id="l-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field"><label>Senha</label>
+      <input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="err" id="l-err"></div>
+  </div>
+</div>
+
+<!-- ── ADMIN ── -->
+<div class="admin" id="admin">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-title">AD Louveira</div>
+      <div class="sidebar-logo-sub">Gestão de Artes</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('p-solic')" id="nav-solic">
+        <span class="icon">📋</span> Solicitações
+      </div>
+      <div class="nav-item" onclick="showPage('p-audit')" id="nav-audit">
+        <span class="icon">🕓</span> Auditoria
+      </div>
+      <div class="nav-item" id="nav-users" style="display:none" onclick="showPage('p-users')">
+        <span class="icon">👥</span> Usuários
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sb-name">—</div>
+      <div class="sidebar-user-role" id="sb-role">—</div>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Solicitações -->
+    <div class="page active" id="p-solic">
+      <div class="page-title">📋 Solicitações</div>
+      <div class="stats">
+        <div class="sc"><div class="sc-num" id="s-tot">—</div><div class="sc-lbl">Total</div></div>
+        <div class="sc" style="border-top:3px solid #f0c030"><div class="sc-num" id="s-ag" style="color:#7a5800">—</div><div class="sc-lbl">Aguardando</div></div>
+        <div class="sc" style="border-top:3px solid #5b9bd5"><div class="sc-num" id="s-pr" style="color:#004085">—</div><div class="sc-lbl">Em Produção</div></div>
+        <div class="sc" style="border-top:3px solid #b39ddb"><div class="sc-num" id="s-an" style="color:#311b6b">—</div><div class="sc-lbl">Em Analise</div></div>
+        <div class="sc" style="border-top:3px solid #6a1fa0"><div class="sc-num" id="s-re" style="color:#6a1fa0">—</div><div class="sc-lbl">Revisão</div></div>
+        <div class="sc" style="border-top:3px solid #1a6e3a"><div class="sc-num" id="s-en" style="color:#1a6e3a">—</div><div class="sc-lbl">Entregue</div></div>
+        <div class="sc" style="border-top:3px solid #1a4a8a"><div class="sc-num" id="s-co" style="color:#1a4a8a">—</div><div class="sc-lbl">Concluído</div></div>
+      </div>
+      <div class="toolbar">
+        <input id="busca" placeholder="🔍 Buscar nome, solicitante, congregação…" oninput="filtrar()"/>
+        <select id="f-status" onchange="filtrar()">
+          <option value="">Todos os status</option>
+          <option>Aguardando</option><option>Em Produção</option>
+          <option>Em Analise</option><option>Revisão</option>
+          <option>Entregue</option><option>Concluido</option>
+        </select>
+        <button class="btn btn-p" onclick="carregarSolic()">🔄 Atualizar</button>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table><thead><tr>
+          <th>#</th><th>Data</th><th>Congregação</th><th>Solicitante</th>
+          <th>Nome do Trabalho</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="tb-solic"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Auditoria -->
+    <div class="page" id="p-audit">
+      <div class="page-title">🕓 Auditoria de Alterações</div>
+      <div class="toolbar">
+        <input id="busca-audit" placeholder="🔍 Buscar por nome ou usuário…" oninput="filtrarAudit()"/>
+        <button class="btn btn-p" onclick="carregarAudit()">🔄 Atualizar</button>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Data/Hora</th><th>Usuário</th><th>Solicitação</th>
+          <th>Status Anterior</th><th>Novo Status</th>
+        </tr></thead>
+        <tbody id="tb-audit"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Usuários (só admin) -->
+    <div class="page" id="p-users">
+      <div class="page-title">👥 Gerenciar Usuários</div>
+      <div class="toolbar">
+        <button class="btn btn-p" onclick="openNovoUsuario()">+ Novo Usuário</button>
+        <button class="btn btn-p" onclick="carregarUsers()">🔄 Atualizar</button>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="tb-users"></tbody></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal detalhe solicitação -->
+<div class="overlay" id="m-det">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2 id="m-det-title">Detalhes</h2>
+      <button class="modal-close" onclick="closeModal('m-det')">✕</button>
+    </div>
+    <div class="modal-body" id="m-det-body"></div>
+  </div>
+</div>
+
+<!-- Modal novo usuário -->
+<div class="overlay" id="m-user">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Novo Usuário</h2>
+      <button class="modal-close" onclick="closeModal('m-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Nome completo</label>
+          <input type="text" id="u-nome" placeholder="Nome"/></div>
+        <div class="field"><label>E-mail</label>
+          <input type="email" id="u-email" placeholder="email@exemplo.com"/></div>
+        <div class="field"><label>Senha inicial</label>
+          <input type="password" id="u-pass" placeholder="Mínimo 6 caracteres"/></div>
+        <div class="field"><label>Perfil</label>
+          <select id="u-perfil" style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:11px 14px;font-size:14px;font-family:Lato,sans-serif;outline:none">
+            <option value="designer">Designer</option>
+            <option value="admin">Admin</option>
+          </select></div>
+      </div>
+      <div class="err" id="u-err" style="margin-top:12px"></div>
+      <button class="btn btn-p" style="margin-top:16px;width:100%;padding:12px" onclick="criarUsuario()">Criar Usuário</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SURL = 'https://tcvqkkgirxdarldhdeoz.supabase.co';
+const SKEY = 'sb_publishable_GO8wtvQaIp2jO_2wD342zw_rHU7v4jM';
+const sb   = supabase.createClient(SURL, SKEY);
+
+var _user = null;
+var _perfil = null;
+var _solic = [];
+var _audit = [];
+var _users = [];
+
+var stMap = {
+  'Aguardando':'aguardando','Em Produção':'producao',
+  'Em Analise':'analise','Revisão':'revisao',
+  'Entregue':'entregue','Concluido':'concluido','Concluído':'concluido'
+};
+var stOpts = ['Aguardando','Em Produção','Em Analise','Revisão','Entregue','Concluido'];
+
+// ── Auth ──────────────────────────────────────────────────
+async function doLogin(){
+  var email = document.getElementById('l-email').value.trim();
+  var pass  = document.getElementById('l-pass').value;
+  var btn   = document.getElementById('btn-login');
+  var err   = document.getElementById('l-err');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Entrando…';
+
+  var { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){
+    err.textContent = 'E-mail ou senha incorretos.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
+  }
+  _user = data.user;
+  await carregarPerfil();
+  iniciarAdmin();
+}
+
+async function carregarPerfil(){
+  var { data } = await sb.from('perfis').select('*').eq('id', _user.id).single();
+  _perfil = data;
+}
+
+function iniciarAdmin(){
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('admin').style.display     = 'block';
+  document.getElementById('sb-name').textContent  = _perfil ? _perfil.nome  : _user.email;
+  document.getElementById('sb-role').textContent  = _perfil ? (_perfil.perfil === 'admin' ? 'Administrador' : 'Designer') : 'Designer';
+  if(_perfil && _perfil.perfil === 'admin'){
+    document.getElementById('nav-users').style.display = 'flex';
+  }
+  carregarSolic();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  _user = null; _perfil = null;
+  document.getElementById('admin').style.display      = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+// Auto-login se sessão ativa
+sb.auth.getSession().then(function({ data }){
+  if(data.session){
+    _user = data.session.user;
+    carregarPerfil().then(iniciarAdmin);
+  }
+});
+
+// ── Navegação ──────────────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  var map = {'p-solic':'nav-solic','p-audit':'nav-audit','p-users':'nav-users'};
+  var navEl = document.getElementById(map[id]);
+  if(navEl) navEl.classList.add('active');
+  if(id === 'p-audit') carregarAudit();
+  if(id === 'p-users') carregarUsers();
+}
+
+// ── Solicitações ───────────────────────────────────────────
+async function carregarSolic(){
+  document.getElementById('tb-solic').innerHTML =
+    '<tr><td colspan="7" class="loading">⏳ Carregando…</td></tr>';
+  var { data, error } = await sb.from('solicitacoes').select('*').order('id', { ascending: false });
+  if(error){ toast('Erro: ' + error.message, true); return; }
+  _solic = data || [];
+  atualizarStats(_solic);
+  filtrar();
+}
+
+function atualizarStats(rows){
+  function cnt(s){ return rows.filter(function(r){ return (r.status||'Aguardando')===s; }).length; }
+  document.getElementById('s-tot').textContent = rows.length;
+  document.getElementById('s-ag').textContent  = cnt('Aguardando');
+  document.getElementById('s-pr').textContent  = cnt('Em Produção');
+  document.getElementById('s-an').textContent  = cnt('Em Analise');
+  document.getElementById('s-re').textContent  = cnt('Revisão');
+  document.getElementById('s-en').textContent  = cnt('Entregue');
+  document.getElementById('s-co').textContent  = cnt('Concluido') + cnt('Concluído');
+}
+
+function filtrar(){
+  var b  = document.getElementById('busca').value.toLowerCase();
+  var sf = document.getElementById('f-status').value;
+  var f  = _solic.filter(function(r){
+    var mb = !b ||
+      (r.nome_trabalho||'').toLowerCase().indexOf(b)>=0 ||
+      (r.solicitante  ||'').toLowerCase().indexOf(b)>=0 ||
+      (r.congregacao  ||'').toLowerCase().indexOf(b)>=0;
+    var ms = !sf || (r.status||'Aguardando')===sf;
+    return mb && ms;
+  });
+  renderSolic(f);
+}
+
+function renderSolic(rows){
+  if(!rows.length){
+    document.getElementById('tb-solic').innerHTML =
+      '<tr><td colspan="7" class="empty"><div class="empty-icon">📭</div><p>Nenhuma solicitação encontrada.</p></td></tr>';
+    return;
+  }
+  var isAdmin = _perfil && _perfil.perfil === 'admin';
+  document.getElementById('tb-solic').innerHTML = rows.map(function(r){
+    var st   = r.status || 'Aguardando';
+    var cls  = stMap[st] || 'aguardando';
+    var opts = stOpts.map(function(o){
+      return '<option value="'+o+'"'+(o===st?' selected':'')+'>'+o+'</option>';
+    }).join('');
+    return '<tr>' +
+      '<td style="color:#888;font-size:12px">'+(r.num||r.id||'—')+'</td>' +
+      '<td style="white-space:nowrap">'+fmtData(r.data_solic)+'</td>' +
+      '<td>'+(r.congregacao||'—')+'</td>' +
+      '<td>'+(r.solicitante||'—')+'</td>' +
+      '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>' +
+      '<td><select class="st-sel '+cls+'" onchange="updateStatus('+r.id+',this)">'+opts+'</select></td>' +
+      '<td><button class="btn btn-p btn-sm" onclick="verDetalhe('+r.id+')">Ver</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function updateStatus(id, sel){
+  var novo   = sel.value;
+  var antes  = '';
+  var row    = _solic.find(function(r){ return r.id === id; });
+  if(row) antes = row.status || 'Aguardando';
+  sel.className = 'st-sel ' + (stMap[novo] || 'aguardando');
+
+  var { error } = await sb.from('solicitacoes')
+    .update({ status: novo })
+    .eq('id', id);
+
+  if(error){ toast('Erro ao atualizar.', true); return; }
+
+  // Grava auditoria
+  var userName = _perfil ? _perfil.nome : (_user ? _user.email : 'Desconhecido');
+  await sb.from('auditoria').insert({
+    solicitacao_id: id,
+    usuario_id:     _user ? _user.id : null,
+    usuario_nome:   userName,
+    status_antes:   antes,
+    status_depois:  novo
+  });
+
+  if(row) row.status = novo;
+  atualizarStats(_solic);
+  toast('Status atualizado: ' + novo);
+}
+
+function verDetalhe(id){
+  var r = _solic.find(function(d){ return d.id === id; });
+  if(!r) return;
+  document.getElementById('m-det-title').textContent = 'Solicitação #' + (r.num||r.id);
+  var campos = [
+    ['Congregação',    r.congregacao   ||'—'],
+    ['Solicitante',    r.solicitante   ||'—'],
+    ['Data',           fmtData(r.data_solic)],
+    ['Nome do Trabalho', r.nome_trabalho||'—'],
+    ['Local',          r.local         ||'—'],
+    ['Tema',           r.tema          ||'—'],
+    ['Ref. Bíblica',   r.referencia    ||'—'],
+    ['Datas/Horários', (r.datas||'—').replace(/ \|\| /g,'<br>')],
+    ['Pregadores',     (r.pregadores||'—').replace(/ \|\| /g,'<br>')],
+    ['Paleta de Cores',r.paleta_cores  ||'—'],
+    ['Mais Informações',r.mais_info    ||'—'],
+    ['Observações',    r.observacoes   ||'—'],
+    ['Status',         r.status        ||'—']
+  ];
+  document.getElementById('m-det-body').innerHTML = campos.map(function(c){
+    return '<div class="det-row"><div class="det-lbl">'+c[0]+'</div><div class="det-val">'+c[1]+'</div></div>';
+  }).join('');
+  document.getElementById('m-det').classList.add('on');
+}
+
+// ── Auditoria ──────────────────────────────────────────────
+async function carregarAudit(){
+  document.getElementById('tb-audit').innerHTML =
+    '<tr><td colspan="5" class="loading">⏳ Carregando…</td></tr>';
+  var { data, error } = await sb.from('auditoria')
+    .select('*, solicitacoes(nome_trabalho)')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if(error){ toast('Erro: ' + error.message, true); return; }
+  _audit = data || [];
+  filtrarAudit();
+}
+
+function filtrarAudit(){
+  var b = document.getElementById('busca-audit').value.toLowerCase();
+  var f = !b ? _audit : _audit.filter(function(r){
+    return (r.usuario_nome||'').toLowerCase().indexOf(b)>=0 ||
+           ((r.solicitacoes&&r.solicitacoes.nome_trabalho)||'').toLowerCase().indexOf(b)>=0;
+  });
+  renderAudit(f);
+}
+
+function renderAudit(rows){
+  if(!rows.length){
+    document.getElementById('tb-audit').innerHTML =
+      '<tr><td colspan="5" class="empty"><div class="empty-icon">🕓</div><p>Nenhum registro.</p></td></tr>';
+    return;
+  }
+  document.getElementById('tb-audit').innerHTML = rows.map(function(r){
+    var nome = (r.solicitacoes && r.solicitacoes.nome_trabalho) ? r.solicitacoes.nome_trabalho : '#'+r.solicitacao_id;
+    var dt   = new Date(r.created_at);
+    var dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    var cA = stMap[r.status_antes]  || 'aguardando';
+    var cD = stMap[r.status_depois] || 'aguardando';
+    return '<tr>' +
+      '<td style="white-space:nowrap;font-size:12px">'+dtStr+'</td>' +
+      '<td><strong>'+( r.usuario_nome||'—')+'</strong></td>' +
+      '<td>'+nome+'</td>' +
+      '<td><span class="st-sel '+cA+'" style="cursor:default">'+( r.status_antes||'—')+'</span></td>' +
+      '<td><span class="st-sel '+cD+'" style="cursor:default">'+( r.status_depois||'—')+'</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ── Usuários ───────────────────────────────────────────────
+async function carregarUsers(){
+  document.getElementById('tb-users').innerHTML =
+    '<tr><td colspan="5" class="loading">⏳ Carregando…</td></tr>';
+  var { data, error } = await sb.from('perfis').select('*').order('nome');
+  if(error){ toast('Erro: ' + error.message, true); return; }
+  _users = data || [];
+  renderUsers(_users);
+}
+
+function renderUsers(rows){
+  if(!rows.length){
+    document.getElementById('tb-users').innerHTML =
+      '<tr><td colspan="5" class="empty"><div class="empty-icon">👥</div><p>Nenhum usuário.</p></td></tr>';
+    return;
+  }
+  document.getElementById('tb-users').innerHTML = rows.map(function(u){
+    var pc  = u.perfil === 'admin' ? 'admin' : 'designer';
+    var plbl = u.perfil === 'admin' ? 'Admin' : 'Designer';
+    var ac  = u.ativo !== false ? 'ativo' : 'inativo';
+    var albl = u.ativo !== false ? 'Ativo' : 'Inativo';
+    var toggleLbl = u.ativo !== false ? 'Desativar' : 'Ativar';
+    return '<tr>' +
+      '<td><strong>'+u.nome+'</strong></td>' +
+      '<td>'+u.email+'</td>' +
+      '<td><span class="badge '+pc+'">'+plbl+'</span></td>' +
+      '<td><span class="badge '+ac+'">'+albl+'</span></td>' +
+      '<td style="display:flex;gap:6px">' +
+      '<button class="btn btn-p btn-sm" onclick="toggleUser(''+u.id+'','+( u.ativo!==false)+')">'+toggleLbl+'</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function openNovoUsuario(){
+  ['u-nome','u-email','u-pass'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('u-err').style.display = 'none';
+  document.getElementById('m-user').classList.add('on');
+}
+
+async function criarUsuario(){
+  var nome  = document.getElementById('u-nome').value.trim();
+  var email = document.getElementById('u-email').value.trim();
+  var pass  = document.getElementById('u-pass').value;
+  var perf  = document.getElementById('u-perfil').value;
+  var err   = document.getElementById('u-err');
+  err.style.display = 'none';
+
+  if(!nome || !email || !pass){
+    err.textContent = 'Preencha todos os campos.';
+    err.style.display = 'block'; return;
+  }
+
+  // Cria via Supabase Auth Admin (requer service_role — usar edge function ou criar manualmente)
+  // Alternativa: cria o perfil e o usuário cria a própria senha via link
+  var { data, error } = await sb.auth.signUp({ email, password: pass,
+    options: { data: { nome } }
+  });
+
+  if(error){
+    err.textContent = error.message;
+    err.style.display = 'block'; return;
+  }
+
+  // Salva perfil
+  await sb.from('perfis').upsert({
+    id: data.user.id, nome, email, perfil: perf, ativo: true
+  });
+
+  closeModal('m-user');
+  toast('Usuário criado com sucesso!');
+  carregarUsers();
+}
+
+async function toggleUser(id, ativo){
+  await sb.from('perfis').update({ ativo: !ativo }).eq('id', id);
+  toast(ativo ? 'Usuário desativado.' : 'Usuário ativado.');
+  carregarUsers();
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function closeModal(id){ document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('.overlay').forEach(function(o){
+  o.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('on'); });
+});
+
+function fmtData(v){
+  if(!v) return '—';
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(String(v).trim())) return v;
+  var d = new Date(v);
+  return isNaN(d) ? v :
+    String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+
+function toast(msg, isErr){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'on' + (isErr ? ' err' : '');
+  setTimeout(function(){ t.className = ''; }, 3000);
+}
+</script>
+</body>
+</html>
