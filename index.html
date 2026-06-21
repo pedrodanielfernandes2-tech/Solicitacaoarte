@@ -172,13 +172,6 @@ select{cursor:pointer}
 </style>
 </head>
 <body>
-<div id="debug-panel" style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;background:#1b1b1b;color:#0f0;font-family:monospace;font-size:11px;padding:10px;overflow-y:auto;z-index:99999;display:none;border-top:3px solid #0f0">
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-    <strong style="color:#fff">🐛 DEBUG LOG</strong>
-    <button onclick="document.getElementById('debug-panel').style.display='none'" style="background:#c04040;color:#fff;border:none;padding:2px 10px;cursor:pointer;border-radius:4px">Fechar</button>
-  </div>
-  <div id="debug-log"></div>
-</div>
 <div class="wrap" id="main-wrap">
 
 <!-- popup -->
@@ -665,23 +658,7 @@ function renderPvPaleta(){
 function remPaleta(i){paletaFiles.splice(i,1);renderPvPaleta();}
 
 // ── ENVIAR → Google Sheets ──
-function dlog(msg, color){
-  var panel = document.getElementById('debug-panel');
-  var log   = document.getElementById('debug-log');
-  panel.style.display = 'block';
-  var line = document.createElement('div');
-  var time = new Date().toLocaleTimeString('pt-BR');
-  line.style.color = color || '#0f0';
-  line.textContent = '[' + time + '] ' + msg;
-  log.appendChild(line);
-  panel.scrollTop = panel.scrollHeight;
-  console.log('[DEBUG]', msg);
-}
-
 function enviar(){
-  document.getElementById('debug-log').innerHTML = '';
-  dlog('▶ Iniciando envio...', '#fff');
-
   var cong  =document.getElementById('congregacao').value;
   var solit =document.getElementById('solicitante').value.trim();
   var dsol  =document.getElementById('data-sol').value;
@@ -695,19 +672,14 @@ function enviar(){
   var mais  =document.getElementById('mais-info').value.trim();
   var obs   =document.getElementById('obs').value.trim();
 
-  dlog('✓ Campos lidos: cong=' + cong + ', nome=' + nome + ', local=' + localV);
-
   if(!cong||!nome||!localV){
-    dlog('✗ Validação falhou: campos obrigatórios vazios', '#f55');
     toast('Preencha Congregação, Nome do Evento e Local.',true);return;
   }
-  dlog('✓ Validação OK');
 
   var datas=[];
   document.querySelectorAll('.date-row').forEach(function(r,i){
     datas.push('Data '+(i+1)+': '+(fmtDate(r.querySelector('.c-data').value)||'—')+' | '+(r.querySelector('.c-hora').value||'—'));
   });
-  dlog('✓ Datas coletadas: ' + datas.length);
 
   var pregs=[];
   var fotosBase64=[];
@@ -722,7 +694,6 @@ function enviar(){
       });
     }
   });
-  dlog('✓ Pregadores coletados: ' + pregs.length + ' | Fotos: ' + fotosBase64.length);
 
   var payload={
     data_solic:    dsol,
@@ -740,15 +711,9 @@ function enviar(){
     status:        'Aguardando'
   };
 
-  dlog('✓ Payload montado: ' + JSON.stringify(payload).substring(0,200) + '...');
-  dlog('→ SUPA_URL = ' + (typeof SUPA_URL !== 'undefined' ? SUPA_URL : 'INDEFINIDA!'), typeof SUPA_URL !== 'undefined' ? '#0f0' : '#f55');
-  dlog('→ SUPA_KEY = ' + (typeof SUPA_KEY !== 'undefined' ? SUPA_KEY.substring(0,20)+'...' : 'INDEFINIDA!'), typeof SUPA_KEY !== 'undefined' ? '#0f0' : '#f55');
-
   var btn=document.querySelector('.btn-send');
   if(btn){btn.disabled=true;btn.textContent='⏳ Enviando...';}
   toast('Enviando solicitação...');
-
-  dlog('→ Disparando fetch POST para Supabase...', '#ff0');
 
   fetch(SUPA_URL + '/rest/v1/solicitacoes', {
     method: 'POST',
@@ -761,17 +726,11 @@ function enviar(){
     body: JSON.stringify(payload)
   })
   .then(function(r){
-    dlog('← Resposta recebida! Status HTTP: ' + r.status, r.ok ? '#0f0' : '#f55');
-    if(!r.ok) return r.text().then(function(t){
-      dlog('✗ Corpo do erro: ' + t, '#f55');
-      throw new Error('HTTP '+r.status+': '+t);
-    });
+    if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+': '+t); });
     return r.json();
   })
   .then(function(data){
-    dlog('✓ SUCESSO! Dados gravados: ' + JSON.stringify(data).substring(0,200), '#0f0');
     var newId = data[0] ? data[0].id : '';
-    dlog('→ ID gerado: ' + newId);
     if(newId){
       fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + newId, {
         method: 'PATCH',
@@ -781,14 +740,12 @@ function enviar(){
           'Authorization': 'Bearer ' + SUPA_KEY
         },
         body: JSON.stringify({ num: newId })
-      }).then(function(){ dlog('✓ Número sequencial atualizado.'); });
+      });
     }
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
     document.getElementById('pop').classList.add('on');
-    dlog('✓ Popup de sucesso exibido. FIM.', '#0f0');
   })
   .catch(function(err){
-    dlog('✗✗✗ ERRO CAPTURADO: ' + err.message, '#f00');
     console.error('Supabase error:', err);
     toast('Erro ao enviar: ' + err.message, true);
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
