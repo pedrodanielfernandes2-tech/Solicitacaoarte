@@ -1254,7 +1254,7 @@ function renderGUsers(rows){
       '<td>'+u.email+'</td>'+
       '<td><span class="g-badge '+pc+'">'+plbl+'</span></td>'+
       '<td><span class="g-badge '+ac+'">'+albl+'</span></td>'+
-      "<td><button class=\\"btn btn-p\\" style=\\"padding:4px 10px;font-size:10px\\" onclick=\\"toggleGUser('"+u.id+"',"+(u.ativo!==false)+")\\">"+toggleLbl+"</button></td>"+
+      '<td><button class="btn btn-p" style="padding:4px 10px;font-size:10px" onclick="toggleGUser(\''+u.id+'\','+(u.ativo!==false)+')">'+toggleLbl+'</button></td>'+
       '</tr>';
   }).join('');
 }
