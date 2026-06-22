@@ -669,6 +669,7 @@ select.st-sel{min-width:128px}
         <button class="gestao-sub-btn active" onclick="showGestaoPage(this,'g-solic')">📋 Solicitações</button>
         <button class="gestao-sub-btn" onclick="showGestaoPage(this,'g-audit')">🕓 Auditoria</button>
         <button class="gestao-sub-btn" id="g-nav-users" style="display:none" onclick="showGestaoPage(this,'g-users')">👥 Usuários</button>
+        <button class="gestao-sub-btn" id="g-nav-email" style="display:none" onclick="showGestaoPage(this,'g-email')">✉️ E-mail</button>
       </div>
 
       <div class="gestao-page active" id="g-solic">
@@ -722,6 +723,46 @@ select.st-sel{min-width:128px}
           <table class="g-table"><thead><tr>
             <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th></th>
           </tr></thead><tbody id="g-tb-users"></tbody></table>
+        </div>
+      </div>
+
+      <div class="gestao-page" id="g-email">
+        <div style="max-width:560px">
+          <div style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow-card)">
+            <div style="font-size:13px;color:var(--tm);line-height:1.6">
+              ✉️ Configure aqui o e-mail de <strong>saída (remetente)</strong> e os e-mails de <strong>destino</strong> que receberão notificações automáticas quando uma nova solicitação for enviada ou um comentário for postado.
+            </div>
+          </div>
+
+          <div class="field">
+            <label>E-mail Remetente <span class="req">*</span></label>
+            <input type="text" id="cfg-remetente" placeholder="notificacoes@adlouveira.com.br"/>
+          </div>
+
+          <div class="field">
+            <label>E-mails Destinatários <span class="req">*</span></label>
+            <textarea id="cfg-destinatarios" placeholder="secretaria@adlouveira.com.br, designer@adlouveira.com.br" style="min-height:70px"></textarea>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">Separe múltiplos e-mails por vírgula.</div>
+          </div>
+
+          <div class="field" style="margin-top:8px">
+            <label>Notificações Ativas</label>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--tx)">
+                <input type="checkbox" id="cfg-ativo-solic" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer"/>
+                Nova solicitação enviada
+              </label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--tx)">
+                <input type="checkbox" id="cfg-ativo-comentario" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer"/>
+                Novo comentário em uma solicitação
+              </label>
+            </div>
+          </div>
+
+          <div id="cfg-email-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:#dc2626;margin-top:14px"></div>
+          <div id="cfg-email-ok" style="display:none;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:#065f46;margin-top:14px">✓ Configuração salva com sucesso!</div>
+
+          <button class="btn btn-p" style="margin-top:16px;padding:12px 28px" onclick="salvarConfigEmail()">💾 Salvar Configuração</button>
         </div>
       </div>
 
@@ -1456,6 +1497,7 @@ function iniciarGestao(){
   document.getElementById('g-user-role').textContent = _gPerfil ? (_gPerfil.perfil==='admin'?'Administrador':'Designer') : 'Designer';
   if(_gPerfil && _gPerfil.perfil==='admin'){
     document.getElementById('g-nav-users').style.display='inline-block';
+    document.getElementById('g-nav-email').style.display='inline-block';
   }
   switchTab('gestao');
   carregarGSolic();
@@ -1480,6 +1522,7 @@ SB.auth.getSession().then(function(r){
       document.getElementById('g-user-role').textContent = _gPerfil ? (_gPerfil.perfil==='admin'?'Administrador':'Designer') : 'Designer';
       if(_gPerfil && _gPerfil.perfil==='admin'){
         document.getElementById('g-nav-users').style.display='inline-block';
+    document.getElementById('g-nav-email').style.display='inline-block';
       }
       iniciarPollingNotificacoes();
       SB.from('solicitacoes').select('status').eq('status','Aguardando').then(function(r){
@@ -1496,6 +1539,52 @@ function showGestaoPage(btnEl, id){
   if(btnEl) btnEl.classList.add('active');
   if(id==='g-audit') carregarGAudit();
   if(id==='g-users') carregarGUsers();
+  if(id==='g-email') carregarConfigEmail();
+}
+
+async function carregarConfigEmail(){
+  var r = await SB.from('config_email').select('*').eq('id', 1).single();
+  if(r.error){
+    document.getElementById('cfg-email-err').textContent = 'Não foi possível carregar a configuração. Verifique se a tabela config_email existe no Supabase.';
+    document.getElementById('cfg-email-err').style.display = 'block';
+    return;
+  }
+  document.getElementById('cfg-remetente').value = r.data.remetente || '';
+  document.getElementById('cfg-destinatarios').value = r.data.destinatarios || '';
+  document.getElementById('cfg-ativo-solic').checked = r.data.ativo_nova_solicitacao !== false;
+  document.getElementById('cfg-ativo-comentario').checked = r.data.ativo_comentario !== false;
+}
+
+async function salvarConfigEmail(){
+  var remetente = document.getElementById('cfg-remetente').value.trim();
+  var destinatarios = document.getElementById('cfg-destinatarios').value.trim();
+  var ativoSolic = document.getElementById('cfg-ativo-solic').checked;
+  var ativoComentario = document.getElementById('cfg-ativo-comentario').checked;
+  var err = document.getElementById('cfg-email-err');
+  var ok  = document.getElementById('cfg-email-ok');
+  err.style.display='none'; ok.style.display='none';
+
+  if(!remetente || !destinatarios){
+    err.textContent = 'Preencha o remetente e ao menos um destinatário.';
+    err.style.display = 'block';
+    return;
+  }
+
+  var r = await SB.from('config_email').update({
+    remetente: remetente,
+    destinatarios: destinatarios,
+    ativo_nova_solicitacao: ativoSolic,
+    ativo_comentario: ativoComentario,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+
+  if(r.error){
+    err.textContent = 'Erro ao salvar: ' + r.error.message;
+    err.style.display = 'block';
+    return;
+  }
+  ok.style.display = 'block';
+  toast('Configuração de e-mail salva!');
 }
 
 async function carregarGSolic(){
