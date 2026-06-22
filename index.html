@@ -337,7 +337,9 @@ select{cursor:pointer}
   display:inline-block;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;
   border:none;outline:none;cursor:pointer;font-family:'Inter',sans-serif;
   box-shadow:0 2px 6px -1px rgba(0,0,0,.1);
+  white-space:nowrap;
 }
+select.st-sel{min-width:128px}
 .badge-status.aguardando,.st-sel.aguardando{background:linear-gradient(135deg,#fde68a,#fbbf24);color:#451a03}
 .badge-status.producao,.st-sel.producao{background:linear-gradient(135deg,#93c5fd,#3b82f6);color:#fff}
 .badge-status.analise,.st-sel.analise{background:linear-gradient(135deg,#d8b4fe,#a855f7);color:#fff}
@@ -1444,7 +1446,7 @@ function renderGAudit(rows){
     var cA=gStMap[r.status_antes]||'aguardando';
     var cD=gStMap[r.status_depois]||'aguardando';
     return '<tr>'+
-      '<td style="white-space:nowrap;font-size:11px">'+dtStr+'</td>'+
+      '<td style="white-space:nowrap"><span style="font-size:11px;font-weight:700;color:var(--teal2);background:var(--sur2);padding:4px 9px;border-radius:8px;border:1px solid var(--bor)">'+dtStr+'</span></td>'+
       '<td><strong>'+(r.usuario_nome||'—')+'</strong></td>'+
       '<td>'+nome+'</td>'+
       '<td><span class="st-sel '+cA+'" style="cursor:default">'+(r.status_antes||'—')+'</span></td>'+
