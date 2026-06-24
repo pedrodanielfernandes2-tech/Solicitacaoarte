@@ -410,12 +410,13 @@ select.st-sel{min-width:128px}
 }
 
 /* ══ Gestão extras ══ */
-.gestao-sub{display:flex;gap:4px;margin-bottom:0;border-bottom:1px solid var(--bor);padding-bottom:0}
+.gestao-sub{display:flex;gap:4px;margin-bottom:0;border-bottom:1px solid var(--bor);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .gestao-sub-btn{
   padding:11px 22px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
   letter-spacing:.4px;text-transform:uppercase;cursor:pointer;border:none;
   background:transparent;color:var(--tm);border-bottom:3px solid transparent;
   transition:all .2s;border-radius:var(--r-sm) var(--r-sm) 0 0;
+  white-space:nowrap;flex-shrink:0;
 }
 .gestao-sub-btn.active{color:var(--teal2);border-bottom-color:var(--teal);background:var(--sur2)}
 .gestao-sub-btn:hover:not(.active){color:var(--teal2);background:rgba(20,184,166,.05)}
@@ -459,6 +460,11 @@ select.st-sel{min-width:128px}
   .date-row{grid-template-columns:1fr;gap:10px}
   .date-row .ic{justify-self:end;margin-top:-6px}
   .tabs{justify-content:center}
+  .gestao-container{padding:18px 16px!important}
+  .gestao-sub-btn{padding:10px 14px;font-size:11px}
+  .g-table-wrap{overflow-x:auto}
+  .g-table{min-width:560px}
+  .sidebar-user-box{flex-wrap:wrap;gap:10px}
 }
 @media(max-width:420px){
   input[type=date],input[type=time]{font-size:13px;padding:10px 10px}
@@ -601,11 +607,11 @@ select.st-sel{min-width:128px}
   <div class="field">
     <label>Imagem(ns) de referência de cor ou estilo <em style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</em></label>
     <div class="ph" style="margin-bottom:10px">🎨 Envie imagens que sirvam de referência para as cores ou estilo da arte desejada. Pode ser um print, paleta, foto ou qualquer inspiração visual.</div>
-    <div class="upa" id="dz-paleta">
+    <label class="upa" id="dz-paleta" for="paleta-input" style="display:block">
       <input type="file" id="paleta-input" accept="image/*" multiple onchange="hPaleta(this.files)"/>
       <div class="upi">🖼️</div>
       <div class="upl">Clique ou arraste as imagens aqui<br/><strong>JPG, PNG ou WEBP — múltiplas imagens aceitas</strong></div>
-    </div>
+    </label>
     <div class="prev" id="pv-paleta"></div>
     <input id="cores-hid" type="hidden"/>
   </div>
@@ -675,7 +681,7 @@ select.st-sel{min-width:128px}
 
   <!-- Tab Gestão -->
   <div class="tab-pane" id="tab-gestao">
-    <div style="background:var(--sur);border:1px solid var(--bor);border-top:none;padding:24px 40px">
+    <div class="gestao-container" style="background:var(--sur);border:1px solid var(--bor);border-top:none;padding:24px 40px">
 
       <div class="sidebar-user-box">
         <div>
@@ -978,8 +984,8 @@ function renderPreg(){
       '<div id="fs'+i+'" style="display:'+sc+'">'+
       '<div class="ph">📸 Foto com boa resolução, da cintura para cima, ombros aparecendo, sem cortar a cabeça. <strong>Não aceitamos selfies.</strong></div>'+
       '<div class="field" style="margin-top:10px"><label>Foto(s)</label>'+
-      '<div class="upa" id="dz'+i+'"><input type="file" accept="image/*" multiple onchange="hFiles(this.files,'+i+')"/>'+
-      '<div class="upi">🖼️</div><div class="upl">Clique ou arraste aqui<br/><strong>JPG, PNG ou WEBP</strong></div></div>'+
+      '<label class="upa" id="dz'+i+'" for="fi'+i+'" style="display:block"><input type="file" id="fi'+i+'" accept="image/*" multiple onchange="hFiles(this.files,'+i+')"/>'+
+      '<div class="upi">🖼️</div><div class="upl">Clique ou arraste aqui<br/><strong>JPG, PNG ou WEBP</strong></div></label>'+
       '<div class="prev" id="pv'+i+'"></div></div></div>';
     cont.appendChild(block);
     if(fMap[i]) renderPv(i);
