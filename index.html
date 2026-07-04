@@ -839,6 +839,88 @@ select.st-sel{min-width:128px}
   </div>
 </div>
 
+<!-- Modal: Confirmar Exclusão -->
+<div class="pop" id="m-excluir">
+  <div class="pbox" style="max-width:520px;text-align:left">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="font-size:32px">🗑️</div>
+      <div>
+        <div class="ptit" style="font-size:17px;margin:0;color:#c04040">Excluir Solicitação</div>
+        <div style="font-size:13px;color:var(--tm);margin-top:2px">Esta ação não pode ser desfeita.</div>
+      </div>
+    </div>
+    <div id="m-excluir-body" style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r-sm);padding:14px;margin-bottom:18px;font-size:13px;line-height:1.7;max-height:280px;overflow-y:auto"></div>
+    <div style="font-size:14px;font-weight:700;color:#c04040;margin-bottom:16px;text-align:center">Deseja realmente excluir esta solicitação?</div>
+    <div style="display:flex;gap:10px">
+      <button class="pok" id="btn-confirmar-excluir" style="flex:1;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px -2px rgba(220,38,38,.4)" onclick="confirmarExcluir()">✓ Sim, Excluir</button>
+      <button class="pok" style="flex:1;background:transparent;color:var(--tm);border:1.5px solid var(--bor)" onclick="document.getElementById('m-excluir').classList.remove('on')">✕ Não, Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar Solicitação -->
+<div class="pop" id="m-editar">
+  <div class="pbox" style="max-width:580px;text-align:left;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;position:sticky;top:0;background:var(--sur);padding-bottom:12px;border-bottom:1px solid var(--bor);z-index:1">
+      <div>
+        <div class="ptit" style="font-size:17px;margin:0">✏️ Editar Solicitação</div>
+        <div id="m-editar-subtitle" style="font-size:12px;color:var(--tm);margin-top:2px"></div>
+      </div>
+      <button onclick="document.getElementById('m-editar').classList.remove('on')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tm)">✕</button>
+    </div>
+    <div class="login-field"><label>Congregação</label>
+      <select id="e-congregacao" style="background:var(--sur2);border:1.5px solid var(--bor);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;width:100%">
+        <option value="">Selecione…</option>
+        <option>Cavalli</option><option>Colinas São José</option><option>Estiva</option>
+        <option>Igreja Sede</option><option>Lago Azul</option><option>Monterrey</option>
+      </select>
+    </div>
+    <div class="login-field"><label>Solicitante</label>
+      <input type="text" id="e-solicitante" placeholder="Nome do solicitante"/>
+    </div>
+    <div class="login-field"><label>Nome do Trabalho / Evento</label>
+      <input type="text" id="e-nome-trabalho" placeholder="Nome do trabalho"/>
+    </div>
+    <div class="login-field"><label>Local</label>
+      <input type="text" id="e-local" placeholder="Local do evento"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="login-field"><label>Tema</label>
+        <input type="text" id="e-tema" placeholder="Tema"/>
+      </div>
+      <div class="login-field"><label>Referência Bíblica</label>
+        <input type="text" id="e-referencia" placeholder="Ex: João 3:16"/>
+      </div>
+    </div>
+    <div class="login-field"><label>Datas / Horários</label>
+      <input type="text" id="e-datas" placeholder="Ex: Data 1: 15/06/2026 | 19:00"/>
+    </div>
+    <div class="login-field"><label>Pregadores / Ministros</label>
+      <input type="text" id="e-pregadores" placeholder="Ex: Pregador 1: Pastor João | Foto: Sim"/>
+    </div>
+    <div class="login-field"><label>Paleta de Cores / Referência Visual</label>
+      <input type="text" id="e-paleta" placeholder="Cores ou referências"/>
+    </div>
+    <div class="login-field"><label>Mais Informações</label>
+      <textarea id="e-mais-info" style="min-height:70px" placeholder="Informações adicionais…"></textarea>
+    </div>
+    <div class="login-field"><label>Observações</label>
+      <textarea id="e-obs" style="min-height:70px" placeholder="Observações…"></textarea>
+    </div>
+    <div class="login-field"><label>Status</label>
+      <select id="e-status" style="background:var(--sur2);border:1.5px solid var(--bor);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;width:100%">
+        <option>Aguardando</option><option>Em Produção</option><option>Em Analise</option>
+        <option>Revisão</option><option>Entregue</option><option>Concluido</option>
+      </select>
+    </div>
+    <div id="m-editar-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:10px;font-size:13px;color:#dc2626;margin-bottom:10px"></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="pok" style="flex:1" onclick="salvarEdicao()">💾 Salvar Alterações</button>
+      <button class="pok" style="flex:1;background:transparent;color:var(--tm);border:1.5px solid var(--bor)" onclick="document.getElementById('m-editar').classList.remove('on')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="pop" id="m-gdet">
   <div class="pbox" style="max-width:520px;text-align:left;max-height:80vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -1706,7 +1788,11 @@ function renderGSolic(rows){
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td><select class="st-sel '+cls+'" onchange="updateGStatus('+r.id+',this)">'+opts+'</select></td>'+
-      '<td><button class="btn btn-p" style="padding:4px 10px;font-size:10px" onclick="verGDetalhe('+r.id+')">Ver</button></td>'+
+      '<td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">'+
+        '<button class="btn btn-p" style="padding:4px 10px;font-size:10px" onclick="verGDetalhe('+r.id+')">Ver</button>'+
+        '<button class="btn" style="padding:4px 10px;font-size:10px;background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff" onclick="abrirEditar('+r.id+')">✏️ Editar</button>'+
+        '<button class="btn" style="padding:4px 10px;font-size:10px;background:linear-gradient(135deg,#fca5a5,#ef4444);color:#fff" onclick="abrirExcluir('+r.id+')">🗑️ Excluir</button>'+
+      '</td>'+
       '</tr>';
   }).join('');
 }
@@ -1944,6 +2030,131 @@ async function toggleGUser(id, ativo){
   await SB.from('perfis').update({ ativo: !ativo }).eq('id', id);
   toast(ativo?'Usuário desativado.':'Usuário ativado.');
   carregarGUsers();
+}
+
+// ── Excluir Solicitação ──
+var _excluirId = null;
+
+function abrirExcluir(id){
+  var r = _gSolic.find(function(d){ return d.id===id; });
+  if(!r) return;
+  _excluirId = id;
+  var campos = [
+    ['Nº', r.num||r.id||'—'],
+    ['Congregação', r.congregacao||'—'],
+    ['Solicitante', r.solicitante||'—'],
+    ['Data', fmtDataHist(r.data_solic)],
+    ['Nome do Trabalho', r.nome_trabalho||'—'],
+    ['Local', r.local||'—'],
+    ['Tema', r.tema||'—'],
+    ['Ref. Bíblica', r.referencia||'—'],
+    ['Datas/Horários', (r.datas||'—').replace(/ \|\| /g,' | ')],
+    ['Pregadores', (r.pregadores||'—').replace(/ \|\| /g,' | ')],
+    ['Status', r.status||'—']
+  ];
+  document.getElementById('m-excluir-body').innerHTML = campos.map(function(c){
+    return '<div style="display:flex;gap:8px;border-bottom:1px solid var(--bor);padding:5px 0">' +
+      '<span style="font-size:11px;font-weight:700;color:var(--tm);min-width:130px;flex-shrink:0">'+c[0]+'</span>' +
+      '<span style="font-size:13px;color:var(--tx)">'+c[1]+'</span></div>';
+  }).join('');
+  document.getElementById('m-excluir').classList.add('on');
+}
+
+async function confirmarExcluir(){
+  if(!_excluirId) return;
+  var btn = document.getElementById('btn-confirmar-excluir');
+  btn.disabled = true; btn.textContent = '⏳ Excluindo…';
+
+  var r = await SB.from('solicitacoes').delete().eq('id', _excluirId);
+  btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
+
+  if(r.error){
+    toast('Erro ao excluir: ' + r.error.message, true);
+    return;
+  }
+  document.getElementById('m-excluir').classList.remove('on');
+  _gSolic = _gSolic.filter(function(s){ return s.id !== _excluirId; });
+  _excluirId = null;
+  atualizarGStats(_gSolic);
+  filtrarGSolic();
+  toast('Solicitação excluída com sucesso!');
+}
+
+// ── Editar Solicitação ──
+var _editarId = null;
+
+function abrirEditar(id){
+  var r = _gSolic.find(function(d){ return d.id===id; });
+  if(!r) return;
+  _editarId = id;
+  document.getElementById('m-editar-subtitle').textContent = 'Solicitação #'+(r.num||r.id)+' — '+(r.nome_trabalho||'');
+  document.getElementById('e-congregacao').value  = r.congregacao   || '';
+  document.getElementById('e-solicitante').value  = r.solicitante   || '';
+  document.getElementById('e-nome-trabalho').value= r.nome_trabalho || '';
+  document.getElementById('e-local').value        = r.local         || '';
+  document.getElementById('e-tema').value         = r.tema          || '';
+  document.getElementById('e-referencia').value   = r.referencia    || '';
+  document.getElementById('e-datas').value        = (r.datas        || '').replace(/ \|\| /g,'\n');
+  document.getElementById('e-pregadores').value   = (r.pregadores   || '').replace(/ \|\| /g,'\n');
+  document.getElementById('e-paleta').value       = r.paleta_cores  || '';
+  document.getElementById('e-mais-info').value    = r.mais_info     || '';
+  document.getElementById('e-obs').value          = r.observacoes   || '';
+  document.getElementById('e-status').value       = r.status        || 'Aguardando';
+  document.getElementById('m-editar-err').style.display = 'none';
+  document.getElementById('m-editar').classList.add('on');
+}
+
+async function salvarEdicao(){
+  if(!_editarId) return;
+  var err = document.getElementById('m-editar-err');
+  err.style.display = 'none';
+
+  var payload = {
+    congregacao:   document.getElementById('e-congregacao').value,
+    solicitante:   document.getElementById('e-solicitante').value.trim(),
+    nome_trabalho: document.getElementById('e-nome-trabalho').value.trim(),
+    local:         document.getElementById('e-local').value.trim(),
+    tema:          document.getElementById('e-tema').value.trim(),
+    referencia:    document.getElementById('e-referencia').value.trim(),
+    datas:         document.getElementById('e-datas').value.trim().replace(/\n/g,' || '),
+    pregadores:    document.getElementById('e-pregadores').value.trim().replace(/\n/g,' || '),
+    paleta_cores:  document.getElementById('e-paleta').value.trim(),
+    mais_info:     document.getElementById('e-mais-info').value.trim(),
+    observacoes:   document.getElementById('e-obs').value.trim(),
+    status:        document.getElementById('e-status').value
+  };
+
+  if(!payload.congregacao || !payload.nome_trabalho){
+    err.textContent = 'Congregação e Nome do Trabalho são obrigatórios.';
+    err.style.display = 'block'; return;
+  }
+
+  var r = await SB.from('solicitacoes').update(payload).eq('id', _editarId);
+  if(r.error){
+    err.textContent = 'Erro ao salvar: ' + r.error.message;
+    err.style.display = 'block'; return;
+  }
+
+  // Registra na auditoria se o status mudou
+  var row = _gSolic.find(function(s){ return s.id===_editarId; });
+  if(row && row.status !== payload.status){
+    var userName = _gPerfil ? _gPerfil.nome : (_gUser?_gUser.email:'Desconhecido');
+    await SB.from('auditoria').insert({
+      solicitacao_id: _editarId,
+      usuario_id: _gUser ? _gUser.id : null,
+      usuario_nome: userName,
+      status_antes: row.status || 'Aguardando',
+      status_depois: payload.status
+    });
+  }
+
+  // Atualiza localmente
+  Object.assign(row, payload);
+  document.getElementById('m-editar').classList.remove('on');
+  _editarId = null;
+  atualizarGStats(_gSolic);
+  filtrarGSolic();
+  toast('Solicitação atualizada com sucesso!');
 }
 
 </script>
