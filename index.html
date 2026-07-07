@@ -2083,8 +2083,12 @@ async function confirmarExcluir(){
     btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
     _excluirId = null;
 
-    // Recarrega lista do banco
+    // Recarrega lista do banco e atualiza badge
     await carregarGSolic();
+    // Atualiza badge com contagem fresca do banco
+    SB.from('solicitacoes').select('status').eq('status','Aguardando').then(function(r){
+      if(!r.error) atualizarBadgeAguardando((r.data||[]).length);
+    });
     toast('Solicitação excluída com sucesso!');
 
   } catch(err) {
