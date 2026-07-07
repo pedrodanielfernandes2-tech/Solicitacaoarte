@@ -2069,25 +2069,45 @@ async function confirmarExcluir(){
 
   var idNum = parseInt(_excluirId, 10);
 
+  // Log visível na tela
+  var debugDiv = document.createElement('div');
+  debugDiv.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font-family:monospace;font-size:11px;padding:10px;z-index:99999;max-height:200px;overflow-y:auto';
+  debugDiv.id='excluir-debug';
+  document.body.appendChild(debugDiv);
+  function dlog(msg, color){ debugDiv.innerHTML += '<div style="color:'+(color||'#0f0')+'">'+msg+'</div>'; }
+
+  dlog('_excluirId original: ' + JSON.stringify(_excluirId));
+  dlog('idNum convertido: ' + idNum + ' (tipo: ' + typeof idNum + ')');
+  dlog('SUPA_URL: ' + SUPA_URL.substring(0,40));
+
   try {
+    dlog('→ Chamando SB.from(solicitacoes).delete().eq(id, '+idNum+')...');
     var r = await SB.from('solicitacoes').delete().eq('id', idNum);
+    dlog('← Resposta: ' + JSON.stringify(r), r.error ? '#f55' : '#0f0');
 
     if(r.error){
+      dlog('ERRO: ' + r.error.message + ' | code: ' + r.error.code, '#f55');
       toast('Erro: ' + r.error.message, true);
       btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
       return;
     }
 
-    // Fecha o popup
+    dlog('✓ DELETE executado sem erro!', '#0f0');
+    dlog('Aguarde 3s para fechar o debug...', '#ff0');
+
+    setTimeout(function(){
+      var d = document.getElementById('excluir-debug');
+      if(d) d.remove();
+    }, 8000);
+
     document.getElementById('m-excluir').classList.remove('on');
-    // Remove da lista local
-    _gSolic = _gSolic.filter(function(s){ return s.id !== idNum && s.id !== _excluirId; });
+    _gSolic = _gSolic.filter(function(s){ return s.id !== idNum; });
     _excluirId = null;
-    // Recarrega do banco para garantir sincronismo
     await carregarGSolic();
     toast('Solicitação excluída com sucesso!');
 
   } catch(err) {
+    dlog('EXCEPTION: ' + err.message, '#f55');
     toast('Erro inesperado: ' + err.message, true);
     btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
   }
