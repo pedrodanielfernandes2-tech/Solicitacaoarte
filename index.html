@@ -2038,9 +2038,9 @@ async function toggleGUser(id, ativo){
 var _excluirId = null;
 
 function abrirExcluir(id){
-  var r = _gSolic.find(function(d){ return d.id===id; });
+  var r = _gSolic.find(function(d){ return d.id===id || d.id===parseInt(id,10); });
   if(!r) return;
-  _excluirId = id;
+  _excluirId = parseInt(id, 10);
   var campos = [
     ['Nº', r.num||r.id||'—'],
     ['Congregação', r.congregacao||'—'],
@@ -2063,26 +2063,34 @@ function abrirExcluir(id){
 }
 
 async function confirmarExcluir(){
-  if(!_excluirId) return;
+  if(!_excluirId) { toast('ID não encontrado.', true); return; }
   var btn = document.getElementById('btn-confirmar-excluir');
   btn.disabled = true; btn.textContent = '⏳ Excluindo…';
 
-  var r = await SB.from('solicitacoes').delete().eq('id', _excluirId);
-  btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
+  var idNum = parseInt(_excluirId, 10);
 
-  if(r.error){
-    toast('Erro ao excluir: ' + r.error.message + ' — Verifique as policies RLS no Supabase.', true);
-    console.error('Delete error:', r.error);
-    return;
+  try {
+    var r = await SB.from('solicitacoes').delete().eq('id', idNum);
+
+    if(r.error){
+      toast('Erro: ' + r.error.message, true);
+      btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
+      return;
+    }
+
+    // Fecha o popup
+    document.getElementById('m-excluir').classList.remove('on');
+    // Remove da lista local
+    _gSolic = _gSolic.filter(function(s){ return s.id !== idNum && s.id !== _excluirId; });
+    _excluirId = null;
+    // Recarrega do banco para garantir sincronismo
+    await carregarGSolic();
+    toast('Solicitação excluída com sucesso!');
+
+  } catch(err) {
+    toast('Erro inesperado: ' + err.message, true);
+    btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
   }
-  // Confirma que realmente excluiu verificando se count > 0
-  console.log('Delete result:', r);
-  document.getElementById('m-excluir').classList.remove('on');
-  _gSolic = _gSolic.filter(function(s){ return s.id !== _excluirId; });
-  _excluirId = null;
-  atualizarGStats(_gSolic);
-  filtrarGSolic();
-  toast('Solicitação excluída com sucesso!');
 }
 
 // ── Editar via Histórico (busca dados completos do Supabase) ──
