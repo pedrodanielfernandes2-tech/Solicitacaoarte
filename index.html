@@ -1493,6 +1493,7 @@ function renderHistorico(rows){
     '<th>Solicitante</th>'+
     '<th>Nome do Trabalho</th>'+
     '<th>Status</th>'+
+    '<th></th>'+
     '</tr></thead><tbody>';
   rows.forEach(function(r){
     html+='<tr>'+
@@ -1501,6 +1502,7 @@ function renderHistorico(rows){
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td>'+statusBadge(r.status)+'</td>'+
+      '<td><button title="Editar" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px" onclick="abrirEditarHistorico('+r.id+')">✏️</button></td>'+
       '</tr>';
   });
   html+='</tbody></table></div>';
@@ -1788,10 +1790,10 @@ function renderGSolic(rows){
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td><select class="st-sel '+cls+'" onchange="updateGStatus('+r.id+',this)">'+opts+'</select></td>'+
-      '<td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">'+
-        '<button class="btn btn-p" style="padding:4px 10px;font-size:10px" onclick="verGDetalhe('+r.id+')">Ver</button>'+
-        '<button class="btn" style="padding:4px 10px;font-size:10px;background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff" onclick="abrirEditar('+r.id+')">✏️ Editar</button>'+
-        '<button class="btn" style="padding:4px 10px;font-size:10px;background:linear-gradient(135deg,#fca5a5,#ef4444);color:#fff" onclick="abrirExcluir('+r.id+')">🗑️ Excluir</button>'+
+      '<td style="white-space:nowrap">'+
+        '<button title="Ver detalhes" style="background:linear-gradient(135deg,var(--teal-light),var(--teal));border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;margin-right:3px" onclick="verGDetalhe('+r.id+')">👁️</button>'+
+        '<button title="Editar" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;margin-right:3px" onclick="abrirEditar('+r.id+')">✏️</button>'+
+        '<button title="Excluir" style="background:linear-gradient(135deg,#fca5a5,#ef4444);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px" onclick="abrirExcluir('+r.id+')">🗑️</button>'+
       '</td>'+
       '</tr>';
   }).join('');
@@ -2069,15 +2071,32 @@ async function confirmarExcluir(){
   btn.disabled = false; btn.textContent = '✓ Sim, Excluir';
 
   if(r.error){
-    toast('Erro ao excluir: ' + r.error.message, true);
+    toast('Erro ao excluir: ' + r.error.message + ' — Verifique as policies RLS no Supabase.', true);
+    console.error('Delete error:', r.error);
     return;
   }
+  // Confirma que realmente excluiu verificando se count > 0
+  console.log('Delete result:', r);
   document.getElementById('m-excluir').classList.remove('on');
   _gSolic = _gSolic.filter(function(s){ return s.id !== _excluirId; });
   _excluirId = null;
   atualizarGStats(_gSolic);
   filtrarGSolic();
   toast('Solicitação excluída com sucesso!');
+}
+
+// ── Editar via Histórico (busca dados completos do Supabase) ──
+async function abrirEditarHistorico(id){
+  var r = await SB.from('solicitacoes').select('*').eq('id', id).single();
+  if(r.error){ toast('Erro ao carregar dados.', true); return; }
+  // Injeta temporariamente nos dados de gestão se não estiver lá
+  if(!_gSolic.find(function(s){ return s.id===id; })){
+    _gSolic.push(r.data);
+  } else {
+    var idx = _gSolic.findIndex(function(s){ return s.id===id; });
+    _gSolic[idx] = r.data;
+  }
+  abrirEditar(id);
 }
 
 // ── Editar Solicitação ──
