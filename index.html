@@ -1691,7 +1691,7 @@ function renderHistorico(rows){
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td>'+statusBadge(r.status)+'</td>'+
-      '<td><button title="Editar" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px" onclick="abrirEditarHistorico('+r.id+')">✏️</button></td>'+
+      '<td><button title="Editar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirEditarHistorico('+r.id+')">✏️</button></td>'+
       '</tr>';
   });
   html+='</tbody></table></div>';
@@ -2075,9 +2075,9 @@ function renderGSolic(rows){
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
       '<td><select class="st-sel '+cls+'" onchange="updateGStatus('+r.id+',this)">'+opts+'</select></td>'+
       '<td style="white-space:nowrap">'+
-        '<button title="Ver detalhes" style="background:linear-gradient(135deg,var(--teal-light),var(--teal));border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;margin-right:3px" onclick="verGDetalhe('+r.id+')">👁️</button>'+
-        '<button title="Editar" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;margin-right:3px" onclick="abrirEditar('+r.id+')">✏️</button>'+
-        '<button title="Excluir" style="background:linear-gradient(135deg,#fca5a5,#ef4444);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px" onclick="abrirExcluir('+r.id+')">🗑️</button>'+
+        '<button title="Ver detalhes" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="verGDetalhe('+r.id+')">👁️</button>'+
+        '<button title="Editar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirEditar('+r.id+')">✏️</button>'+
+        '<button title="Excluir" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirExcluir('+r.id+')">🗑️</button>'+
       '</td>'+
       '</tr>';
   }).join('');
