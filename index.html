@@ -1230,7 +1230,7 @@ function enviar(){
     if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+': '+t); });
     return r.json();
   })
-  .then(function(data){
+  .then(async function(data){
     var newId = data[0] ? data[0].id : '';
     if(newId){
       fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + newId, {
@@ -1245,7 +1245,15 @@ function enviar(){
     }
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
     document.getElementById('pop').classList.add('on');
-    // Dispara WhatsApp se configurado
+
+    // Faz upload do PDF e fotos para o Supabase Storage e obtém links
+    var linksStorage = { pdf: null, fotos: [] };
+    try {
+      linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs);
+    } catch(e) {
+      console.warn('Upload Storage falhou (WhatsApp será disparado sem links):', e.message);
+    }
+
     dispararWhatsApp('solicitacao', {
       nome_trabalho: nome,
       congregacao: cong,
@@ -1258,7 +1266,9 @@ function enviar(){
       pregadores: pregs.join(' | '),
       paleta_cores: paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '',
       mais_info: mais,
-      observacoes: obs
+      observacoes: obs,
+      link_pdf: linksStorage.pdf,
+      links_fotos: linksStorage.fotos
     });
   })
   .catch(function(err){
@@ -1267,6 +1277,127 @@ function enviar(){
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
   });
 }
+// ── Upload PDF + Fotos para Supabase Storage ──
+async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs){
+  var resultado = { pdf: null, fotos: [] };
+  var pasta = 'solic-' + id + '-' + Date.now();
+
+  // 1. Gera PDF em base64
+  try {
+    var pdfDoc = new jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    var y = 20;
+    var maxW = 170;
+
+    // Cabeçalho
+    pdfDoc.setFillColor(20, 184, 166);
+    pdfDoc.rect(0, 0, 210, 28, 'F');
+    pdfDoc.setTextColor(255,255,255);
+    pdfDoc.setFontSize(14); pdfDoc.setFont('helvetica','bold');
+    pdfDoc.text('Assembleia de Deus Louveira', 15, 11);
+    pdfDoc.setFontSize(8); pdfDoc.setFont('helvetica','normal');
+    pdfDoc.text('SOLICITACAO DE ARTE / POST / MATERIAL', 15, 19);
+    y = 38;
+
+    var campos = [
+      ['Numero', String(id)],
+      ['Data Solicitacao', dsol||'-'],
+      ['Congregacao', cong||'-'],
+      ['Solicitante', solit||'-'],
+      ['Nome do Trabalho', nome||'-'],
+      ['Local', localF||'-'],
+      ['Tema', tema||'-'],
+      ['Referencia Biblica', ref||'-'],
+      ['Datas/Horarios', datas.join(' | ')],
+      ['Pregadores', pregs.join(' | ')],
+      ['Mais Informacoes', mais||'-'],
+      ['Observacoes', obs||'-'],
+    ];
+
+    campos.forEach(function(c){
+      if(y > 265){ pdfDoc.addPage(); y = 20; }
+      pdfDoc.setFontSize(8); pdfDoc.setFont('helvetica','bold');
+      pdfDoc.setTextColor(91,122,120);
+      pdfDoc.text(c[0].toUpperCase(), 15, y);
+      y += 5;
+      pdfDoc.setFontSize(11); pdfDoc.setFont('helvetica','normal');
+      pdfDoc.setTextColor(15,42,44);
+      var linhas = pdfDoc.splitTextToSize(String(c[1]), maxW);
+      linhas.forEach(function(l){ pdfDoc.text(l, 15, y); y += 6; });
+      y += 3;
+    });
+
+    // Footer
+    pdfDoc.setFontSize(8); pdfDoc.setTextColor(150,150,150);
+    pdfDoc.text('Prazos: 60 dias (ideal) - 30 dias (minimo)', 15, 285);
+
+    var pdfBase64 = pdfDoc.output('datauristring');
+    var pdfBlob = dataURItoBlob(pdfBase64);
+    var pdfNome = pasta + '/solicitacao-' + id + '.pdf';
+
+    var uploadR = await fetch(SUPA_URL + '/storage/v1/object/' + pdfNome, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'apikey': SUPA_KEY,
+        'x-upsert': 'true'
+      },
+      body: pdfBlob
+    });
+
+    if(uploadR.ok){
+      resultado.pdf = SUPA_URL + '/storage/v1/object/public/' + pdfNome;
+    }
+  } catch(e){ console.warn('Erro upload PDF:', e.message); }
+
+  // 2. Upload das fotos dos pregadores
+  var fotoIdx = 0;
+  for(var i in fMap){
+    var fotos = fMap[i] || [];
+    for(var j = 0; j < fotos.length; j++){
+      try {
+        var f = fotos[j];
+        var blob = dataURItoBlob(f.s);
+        var ext = f.n.split('.').pop() || 'jpg';
+        var fNome = pasta + '/pregador-' + (parseInt(i)+1) + '-foto' + (j+1) + '.' + ext;
+        var upR = await fetch(SUPA_URL + '/storage/v1/object/' + fNome, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY, 'x-upsert': 'true' },
+          body: blob
+        });
+        if(upR.ok) resultado.fotos.push({ nome: f.n, url: SUPA_URL + '/storage/v1/object/public/' + fNome, tipo: 'pregador' });
+      } catch(e){ console.warn('Erro upload foto pregador:', e.message); }
+    }
+  }
+
+  // 3. Upload das fotos de paleta/referência
+  for(var k = 0; k < paletaFiles.length; k++){
+    try {
+      var pf = paletaFiles[k];
+      var blobP = dataURItoBlob(pf.s);
+      var extP = pf.n.split('.').pop() || 'jpg';
+      var pfNome = pasta + '/referencia-' + (k+1) + '.' + extP;
+      var upRP = await fetch(SUPA_URL + '/storage/v1/object/' + pfNome, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY, 'x-upsert': 'true' },
+        body: blobP
+      });
+      if(upRP.ok) resultado.fotos.push({ nome: pf.n, url: SUPA_URL + '/storage/v1/object/public/' + pfNome, tipo: 'referencia' });
+    } catch(e){ console.warn('Erro upload foto referencia:', e.message); }
+  }
+
+  return resultado;
+}
+
+// Helper: converte dataURI para Blob
+function dataURItoBlob(dataURI){
+  var parts = dataURI.split(',');
+  var mime = parts[0].match(/:(.*?);/)[1];
+  var raw = atob(parts[1]);
+  var arr = new Uint8Array(raw.length);
+  for(var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return new Blob([arr], {type: mime});
+}
+
 function gerarPDF(){
   toast('Gerando PDF...');
 
@@ -1812,6 +1943,30 @@ async function dispararWhatsApp(tipo, dados){
     if(dados.paleta_cores) linhas.push('🎨 *Paleta/Referência:* ' + dados.paleta_cores);
     if(dados.mais_info) linhas.push('💬 *Mais Info:* ' + dados.mais_info);
     if(dados.observacoes) linhas.push('📝 *Observações:* ' + dados.observacoes);
+
+    // Links do Storage
+    if(dados.link_pdf || (dados.links_fotos && dados.links_fotos.length > 0)){
+      linhas.push('');
+      linhas.push('━━━━━━━━━━━━━━━━━━━━━');
+      linhas.push('📎 *Anexos:*');
+      if(dados.link_pdf){
+        linhas.push('📄 PDF da solicitação:');
+        linhas.push(dados.link_pdf);
+      }
+      if(dados.links_fotos && dados.links_fotos.length > 0){
+        var fotoPregs = dados.links_fotos.filter(function(f){ return f.tipo==='pregador'; });
+        var fotoRefs  = dados.links_fotos.filter(function(f){ return f.tipo==='referencia'; });
+        if(fotoPregs.length > 0){
+          linhas.push('📸 Foto(s) do(s) Pregador(es):');
+          fotoPregs.forEach(function(f){ linhas.push(f.url); });
+        }
+        if(fotoRefs.length > 0){
+          linhas.push('🎨 Referência Visual/Paleta:');
+          fotoRefs.forEach(function(f){ linhas.push(f.url); });
+        }
+      }
+    }
+
     linhas.push('');
     linhas.push('━━━━━━━━━━━━━━━━━━━━━');
     linhas.push('_Enviado pelo sistema de solicitações AD Louveira_');
