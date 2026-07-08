@@ -1249,9 +1249,12 @@ function enviar(){
     // Faz upload do PDF e fotos para o Supabase Storage e obtém links
     var linksStorage = { pdf: null, fotos: [] };
     try {
+      toast('Fazendo upload dos arquivos...');
       linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs);
+      toast('Upload concluído! Links gerados: PDF=' + (linksStorage.pdf?'Sim':'Não') + ' Fotos=' + linksStorage.fotos.length);
     } catch(e) {
-      console.warn('Upload Storage falhou (WhatsApp será disparado sem links):', e.message);
+      toast('Aviso upload: ' + e.message, true);
+      console.warn('Upload Storage falhou:', e.message);
     }
 
     dispararWhatsApp('solicitacao', {
@@ -1280,6 +1283,7 @@ function enviar(){
 // ── Upload PDF + Fotos para Supabase Storage ──
 async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs){
   var resultado = { pdf: null, fotos: [] };
+  var bucket = 'solicitacoes-pdf';
   var pasta = 'solic-' + id + '-' + Date.now();
 
   // 1. Gera PDF em base64
@@ -1332,20 +1336,26 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
 
     var pdfBase64 = pdfDoc.output('datauristring');
     var pdfBlob = dataURItoBlob(pdfBase64);
-    var pdfNome = pasta + '/solicitacao-' + id + '.pdf';
+    var pdfNome = bucket + '/' + pasta + '/solicitacao-' + id + '.pdf';
 
     var uploadR = await fetch(SUPA_URL + '/storage/v1/object/' + pdfNome, {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + SUPA_KEY,
         'apikey': SUPA_KEY,
-        'x-upsert': 'true'
+        'x-upsert': 'true',
+        'Content-Type': 'application/pdf'
       },
       body: pdfBlob
     });
 
+    var uploadText = await uploadR.text();
+    console.log('PDF upload status:', uploadR.status, uploadText);
+
     if(uploadR.ok){
       resultado.pdf = SUPA_URL + '/storage/v1/object/public/' + pdfNome;
+    } else {
+      console.warn('PDF upload failed:', uploadR.status, uploadText);
     }
   } catch(e){ console.warn('Erro upload PDF:', e.message); }
 
@@ -1358,13 +1368,14 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
         var f = fotos[j];
         var blob = dataURItoBlob(f.s);
         var ext = f.n.split('.').pop() || 'jpg';
-        var fNome = pasta + '/pregador-' + (parseInt(i)+1) + '-foto' + (j+1) + '.' + ext;
+        var fNome = bucket + '/' + pasta + '/pregador-' + (parseInt(i)+1) + '-foto' + (j+1) + '.' + ext;
         var upR = await fetch(SUPA_URL + '/storage/v1/object/' + fNome, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY, 'x-upsert': 'true' },
           body: blob
         });
         if(upR.ok) resultado.fotos.push({ nome: f.n, url: SUPA_URL + '/storage/v1/object/public/' + fNome, tipo: 'pregador' });
+        else console.warn('Foto pregador upload failed:', await upR.text());
       } catch(e){ console.warn('Erro upload foto pregador:', e.message); }
     }
   }
@@ -1375,13 +1386,14 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
       var pf = paletaFiles[k];
       var blobP = dataURItoBlob(pf.s);
       var extP = pf.n.split('.').pop() || 'jpg';
-      var pfNome = pasta + '/referencia-' + (k+1) + '.' + extP;
+      var pfNome = bucket + '/' + pasta + '/referencia-' + (k+1) + '.' + extP;
       var upRP = await fetch(SUPA_URL + '/storage/v1/object/' + pfNome, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY, 'x-upsert': 'true' },
         body: blobP
       });
       if(upRP.ok) resultado.fotos.push({ nome: pf.n, url: SUPA_URL + '/storage/v1/object/public/' + pfNome, tipo: 'referencia' });
+      else console.warn('Foto referencia upload failed:', await upRP.text());
     } catch(e){ console.warn('Erro upload foto referencia:', e.message); }
   }
 
