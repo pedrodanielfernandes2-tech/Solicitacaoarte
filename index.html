@@ -2391,25 +2391,30 @@ async function confirmarExcluir(){
 
 // ── Editar via Histórico (busca dados completos do Supabase) ──
 async function abrirEditarHistorico(id){
-  var r = await SB.from('solicitacoes').select('*').eq('id', id).single();
-  if(r.error){ toast('Erro ao carregar dados.', true); return; }
-  // Injeta temporariamente nos dados de gestão se não estiver lá
-  if(!_gSolic.find(function(s){ return s.id===id; })){
+  var idNum = parseInt(id, 10);
+  var r = await SB.from('solicitacoes').select('*').eq('id', idNum).single();
+  if(r.error){
+    toast('Erro ao carregar: ' + r.error.message, true);
+    return;
+  }
+  // Injeta ou atualiza nos dados de gestão
+  var idx = _gSolic.findIndex(function(s){ return s.id===idNum || s.id===id; });
+  if(idx === -1){
     _gSolic.push(r.data);
   } else {
-    var idx = _gSolic.findIndex(function(s){ return s.id===id; });
     _gSolic[idx] = r.data;
   }
-  abrirEditar(id);
+  abrirEditar(idNum);
 }
 
 // ── Editar Solicitação ──
 var _editarId = null;
 
 function abrirEditar(id){
-  var r = _gSolic.find(function(d){ return d.id===id; });
+  var idNum = parseInt(id, 10);
+  var r = _gSolic.find(function(d){ return d.id===idNum || d.id===id; });
   if(!r) return;
-  _editarId = id;
+  _editarId = idNum;
   document.getElementById('m-editar-subtitle').textContent = 'Solicitação #'+(r.num||r.id)+' — '+(r.nome_trabalho||'');
   document.getElementById('e-congregacao').value  = r.congregacao   || '';
   document.getElementById('e-solicitante').value  = r.solicitante   || '';
