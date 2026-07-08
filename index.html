@@ -1623,6 +1623,7 @@ function carregarHistorico(){
   .then(function(rows){
     _histDados = rows.map(function(r){
       return {
+        id:               r.id,
         num:              String(r.num || r.id || ''),
         data_solicitacao: r.data_solic || '',
         congregacao:      r.congregacao || '',
