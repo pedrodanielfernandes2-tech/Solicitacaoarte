@@ -775,7 +775,7 @@ select.st-sel{min-width:128px}
           </div>
 
           <div class="field" style="margin-top:8px">
-            <label>Notificações Ativas</label>
+            <label>Notificações E-mail Ativas</label>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--tx)">
                 <input type="checkbox" id="cfg-ativo-solic" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer"/>
@@ -785,6 +785,37 @@ select.st-sel{min-width:128px}
                 <input type="checkbox" id="cfg-ativo-comentario" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer"/>
                 Novo comentário em uma solicitação
               </label>
+            </div>
+          </div>
+
+          <!-- WhatsApp -->
+          <div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--bor)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <span style="font-size:22px">📱</span>
+              <div>
+                <div style="font-size:14px;font-weight:800;color:var(--tx);font-family:'Manrope',sans-serif">WhatsApp</div>
+                <div style="font-size:12px;color:var(--tm)">Ao enviar, abrirá o WhatsApp com mensagem pré-pronta para cada número</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Números WhatsApp <span style="font-weight:400;text-transform:none;letter-spacing:0">(sem + ou espaços, ex: 5511999999999)</span></label>
+              <textarea id="cfg-wpp-numeros" placeholder="5511999999999&#10;5519988887777" style="min-height:80px;font-family:monospace;font-size:13px"></textarea>
+              <div style="font-size:11px;color:var(--tm);margin-top:4px">Um número por linha. Máximo 5 números. Inclua o código do país (55 para Brasil) + DDD + número.</div>
+            </div>
+
+            <div class="field" style="margin-top:4px">
+              <label>Enviar WhatsApp quando</label>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--tx)">
+                  <input type="checkbox" id="cfg-wpp-solic" style="width:18px;height:18px;accent-color:#25d366;cursor:pointer"/>
+                  Nova solicitação enviada
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--tx)">
+                  <input type="checkbox" id="cfg-wpp-comentario" style="width:18px;height:18px;accent-color:#25d366;cursor:pointer"/>
+                  Novo comentário em uma solicitação
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1214,6 +1245,13 @@ function enviar(){
     }
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
     document.getElementById('pop').classList.add('on');
+    // Dispara WhatsApp se configurado
+    dispararWhatsApp('solicitacao', {
+      nome_trabalho: nome,
+      congregacao: cong,
+      solicitante: solit,
+      data_solic: dsol
+    });
   })
   .catch(function(err){
     console.error('Supabase error:', err);
@@ -1676,6 +1714,10 @@ async function carregarConfigEmail(){
   document.getElementById('cfg-destinatarios').disabled = !r.data.usar_destinatarios_extra;
   document.getElementById('cfg-ativo-solic').checked = r.data.ativo_nova_solicitacao !== false;
   document.getElementById('cfg-ativo-comentario').checked = r.data.ativo_comentario !== false;
+  // WhatsApp
+  document.getElementById('cfg-wpp-numeros').value = (r.data.whatsapp_numeros||'').replace(/,/g,'\n');
+  document.getElementById('cfg-wpp-solic').checked = r.data.ativo_whatsapp_solicitacao !== false;
+  document.getElementById('cfg-wpp-comentario').checked = r.data.ativo_whatsapp_comentario !== false;
 }
 
 async function salvarConfigEmail(){
@@ -1684,6 +1726,9 @@ async function salvarConfigEmail(){
   var destinatarios = document.getElementById('cfg-destinatarios').value.trim();
   var ativoSolic = document.getElementById('cfg-ativo-solic').checked;
   var ativoComentario = document.getElementById('cfg-ativo-comentario').checked;
+  var wppNums = document.getElementById('cfg-wpp-numeros').value.trim().split('\n').map(function(n){ return n.replace(/\D/g,''); }).filter(function(n){ return n.length >= 10; }).slice(0,5).join(',');
+  var wppSolic = document.getElementById('cfg-wpp-solic').checked;
+  var wppComent = document.getElementById('cfg-wpp-comentario').checked;
   var err = document.getElementById('cfg-email-err');
   var ok  = document.getElementById('cfg-email-ok');
   err.style.display='none'; ok.style.display='none';
@@ -1705,6 +1750,9 @@ async function salvarConfigEmail(){
     usar_destinatarios_extra: usarExtra,
     ativo_nova_solicitacao: ativoSolic,
     ativo_comentario: ativoComentario,
+    whatsapp_numeros: wppNums,
+    ativo_whatsapp_solicitacao: wppSolic,
+    ativo_whatsapp_comentario: wppComent,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
 
@@ -1714,7 +1762,51 @@ async function salvarConfigEmail(){
     return;
   }
   ok.style.display = 'block';
-  toast('Configuração de e-mail salva!');
+  toast('Configuração salva com sucesso!');
+}
+
+// ── WhatsApp: abre wa.me para cada número configurado ──
+var _wppConfig = null;
+
+async function carregarWppConfig(){
+  if(_wppConfig) return _wppConfig;
+  var r = await SB.from('config_email').select('whatsapp_numeros,ativo_whatsapp_solicitacao,ativo_whatsapp_comentario').eq('id',1).single();
+  if(!r.error && r.data) _wppConfig = r.data;
+  return _wppConfig;
+}
+
+async function dispararWhatsApp(tipo, dados){
+  var cfg = await carregarWppConfig();
+  if(!cfg) return;
+  if(tipo==='solicitacao' && !cfg.ativo_whatsapp_solicitacao) return;
+  if(tipo==='comentario' && !cfg.ativo_whatsapp_comentario) return;
+
+  var numeros = (cfg.whatsapp_numeros||'').split(',').map(function(n){ return n.trim(); }).filter(function(n){ return n.length>=10; });
+  if(!numeros.length) return;
+
+  var msg = '';
+  if(tipo==='solicitacao'){
+    msg = '🆕 *Nova Solicitação de Arte*\n\n' +
+      '📋 *Trabalho:* ' + (dados.nome_trabalho||'—') + '\n' +
+      '🏛️ *Congregação:* ' + (dados.congregacao||'—') + '\n' +
+      '👤 *Solicitante:* ' + (dados.solicitante||'—') + '\n' +
+      '📅 *Data:* ' + (dados.data_solic||'—') + '\n\n' +
+      '📍 Acesse o painel para ver todos os detalhes.';
+  } else if(tipo==='comentario'){
+    msg = '💬 *Novo Comentário*\n\n' +
+      '📋 *Solicitação:* ' + (dados.nome_trabalho||'—') + '\n' +
+      '👤 *De:* ' + (dados.usuario_nome||'—') + '\n' +
+      '💬 *Mensagem:* ' + (dados.mensagem||'—') + '\n\n' +
+      '📍 Acesse o painel para responder.';
+  }
+
+  var msgEnc = encodeURIComponent(msg);
+  // Abre uma janela para cada número com delay para não bloquear pop-ups
+  numeros.forEach(function(num, i){
+    setTimeout(function(){
+      window.open('https://wa.me/' + num + '?text=' + msgEnc, '_blank');
+    }, i * 1500);
+  });
 }
 
 async function carregarGSolic(){
@@ -1918,6 +2010,13 @@ async function enviarComentario(){
     return;
   }
   input.value = '';
+  // Dispara WhatsApp se configurado
+  var solRow = _gSolic.find(function(s){ return String(s.id)===String(solicId); });
+  dispararWhatsApp('comentario', {
+    nome_trabalho: solRow ? solRow.nome_trabalho : '#'+solicId,
+    usuario_nome: userName,
+    mensagem: msg
+  });
   carregarComentarios(solicId);
 }
 
