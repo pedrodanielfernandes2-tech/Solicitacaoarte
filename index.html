@@ -1250,7 +1250,15 @@ function enviar(){
       nome_trabalho: nome,
       congregacao: cong,
       solicitante: solit,
-      data_solic: dsol
+      data_solic: dsol,
+      local: localF,
+      tema: tema,
+      referencia: ref,
+      datas: datas.join(' | '),
+      pregadores: pregs.join(' | '),
+      paleta_cores: paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '',
+      mais_info: mais,
+      observacoes: obs
     });
   })
   .catch(function(err){
@@ -1786,18 +1794,35 @@ async function dispararWhatsApp(tipo, dados){
 
   var msg = '';
   if(tipo==='solicitacao'){
-    msg = '🆕 *Nova Solicitação de Arte*\n\n' +
-      '📋 *Trabalho:* ' + (dados.nome_trabalho||'—') + '\n' +
-      '🏛️ *Congregação:* ' + (dados.congregacao||'—') + '\n' +
-      '👤 *Solicitante:* ' + (dados.solicitante||'—') + '\n' +
-      '📅 *Data:* ' + (dados.data_solic||'—') + '\n\n' +
-      '📍 Acesse o painel para ver todos os detalhes.';
+    var linhas = [
+      '🆕 *NOVA SOLICITAÇÃO DE ARTE*',
+      '━━━━━━━━━━━━━━━━━━━━━',
+      '',
+      '📋 *Nome do Trabalho:* ' + (dados.nome_trabalho||'—'),
+      '🏛️ *Congregação:* ' + (dados.congregacao||'—'),
+      '👤 *Solicitante:* ' + (dados.solicitante||'—'),
+      '📅 *Data Solicitação:* ' + (dados.data_solic||'—'),
+      '',
+      '📍 *Local:* ' + (dados.local||'—'),
+      '✝️ *Tema:* ' + (dados.tema||'—'),
+    ];
+    if(dados.referencia) linhas.push('📖 *Ref. Bíblica:* ' + dados.referencia);
+    if(dados.datas) linhas.push('🕐 *Datas/Horários:* ' + dados.datas.replace(/ \|\| /g, ', ').replace(/Data \d+: /g, ''));
+    if(dados.pregadores) linhas.push('🎤 *Pregadores:* ' + dados.pregadores.replace(/ \|\| /g, ', ').replace(/Pregador \d+: /g, ''));
+    if(dados.paleta_cores) linhas.push('🎨 *Paleta/Referência:* ' + dados.paleta_cores);
+    if(dados.mais_info) linhas.push('💬 *Mais Info:* ' + dados.mais_info);
+    if(dados.observacoes) linhas.push('📝 *Observações:* ' + dados.observacoes);
+    linhas.push('');
+    linhas.push('━━━━━━━━━━━━━━━━━━━━━');
+    linhas.push('_Enviado pelo sistema de solicitações AD Louveira_');
+    msg = linhas.join('\n');
   } else if(tipo==='comentario'){
-    msg = '💬 *Novo Comentário*\n\n' +
+    msg = '💬 *Novo Comentário — AD Louveira*\n\n' +
       '📋 *Solicitação:* ' + (dados.nome_trabalho||'—') + '\n' +
-      '👤 *De:* ' + (dados.usuario_nome||'—') + '\n' +
-      '💬 *Mensagem:* ' + (dados.mensagem||'—') + '\n\n' +
-      '📍 Acesse o painel para responder.';
+      '👤 *De:* ' + (dados.usuario_nome||'—') + '\n\n' +
+      '_"' + (dados.mensagem||'—') + '"_\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━━\n' +
+      '_Acesse o painel para responder._';
   }
 
   var msgEnc = encodeURIComponent(msg);
