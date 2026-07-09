@@ -1257,7 +1257,7 @@ function enviar(){
     var linksStorage = { pdf: null, fotos: [] };
     try {
       toast('Fazendo upload dos arquivos...');
-      linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs);
+      linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais);
       toast('Upload concluído! Links gerados: PDF=' + (linksStorage.pdf?'Sim':'Não') + ' Fotos=' + linksStorage.fotos.length);
     } catch(e) {
       toast('Aviso upload: ' + e.message, true);
@@ -1292,7 +1292,7 @@ function enviar(){
   });
 }
 // ── Upload PDF + Fotos para Supabase Storage ──
-async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, obs){
+async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais){
   var resultado = { pdf: null, fotos: [] };
   var bucket = 'solicitacoes-pdf';
   var pasta = 'solic-' + id + '-' + Date.now();
@@ -1325,7 +1325,6 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
       ['Datas/Horarios', datas.join(' | ')],
       ['Pregadores', pregs.join(' | ')],
       ['Mais Informacoes', mais||'-'],
-      ['Observacoes', obs||'-'],
     ];
 
     campos.forEach(function(c){
@@ -1419,6 +1418,104 @@ function dataURItoBlob(dataURI){
   var arr = new Uint8Array(raw.length);
   for(var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return new Blob([arr], {type: mime});
+}
+
+// ── Gera PDF igual ao exportado, retorna base64 para anexo no e-mail ──
+async function gerarPDFBase64(dados){
+  return new Promise(function(resolve, reject){
+    try {
+      var doc = new jspdf.jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+      var y = 10;
+      var margin = 14;
+      var maxW = pw - margin * 2;
+
+      // Cabeçalho com fundo teal
+      doc.setFillColor(20, 184, 166);
+      doc.rect(0, 0, pw, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Assembleia de Deus Louveira', margin, 13);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('SOLICITACAO DE ARTE / POST / MATERIAL PARA EVENTOS', margin, 21);
+      y = 36;
+
+      function addSecao(titulo) {
+        if (y > ph - 20) { doc.addPage(); y = 14; }
+        doc.setFillColor(240, 253, 250);
+        doc.rect(margin, y - 4, maxW, 8, 'F');
+        doc.setDrawColor(20, 184, 166);
+        doc.line(margin, y + 4, margin + maxW, y + 4);
+        doc.setTextColor(13, 148, 136);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(titulo.toUpperCase(), margin + 2, y + 1);
+        y += 10;
+        doc.setTextColor(15, 42, 44);
+      }
+
+      function addCampo(label, valor) {
+        if (!valor || valor === '-' || valor === '—') return;
+        var linhas = doc.splitTextToSize(String(valor), maxW - 36);
+        var h = linhas.length * 5 + 4;
+        if (y + h > ph - 10) { doc.addPage(); y = 14; }
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(91, 122, 120);
+        doc.text(label.toUpperCase(), margin, y);
+        y += 5;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 42, 44);
+        linhas.forEach(function(l) { doc.text(l, margin, y); y += 5.5; });
+        y += 3;
+      }
+
+      // Seção Identificação
+      addSecao('Identificação');
+      addCampo('Nº Solicitação', String(dados.num || dados.id || '-'));
+      addCampo('Data Solicitação', dados.data_solic || '-');
+      addCampo('Congregação', dados.congregacao || '-');
+      addCampo('Solicitante', dados.solicitante || '-');
+
+      // Seção Dados do Evento
+      addSecao('Dados do Evento');
+      addCampo('Nome do Trabalho / Evento', dados.nome_trabalho || '-');
+      addCampo('Datas e Horários', (dados.datas || '-').replace(/ \|\| /g, '\n').replace(/Data \d+: /g, ''));
+      addCampo('Local', dados.local || '-');
+      addCampo('Tema', dados.tema || '-');
+      addCampo('Referência Bíblica', dados.referencia || '-');
+
+      // Seção Pregadores
+      if (dados.pregadores) {
+        addSecao('Pregadores / Ministros');
+        addCampo('Pregadores', dados.pregadores.replace(/ \|\| /g, '\n').replace(/Pregador \d+: /g, ''));
+      }
+
+      // Seção Paleta / Mais Info
+      if (dados.paleta_cores || dados.mais_info) {
+        addSecao('Informações Complementares');
+        addCampo('Paleta de Cores / Referência Visual', dados.paleta_cores || '-');
+        addCampo('Mais Informações', dados.mais_info || '-');
+      }
+
+      // Rodapé
+      doc.setFillColor(240, 253, 250);
+      doc.rect(0, ph - 14, pw, 14, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(91, 122, 120);
+      doc.text('Prazos: 60 dias (ideal)  ·  30 dias (mínimo)  ·  Sistema de Solicitações AD Louveira', margin, ph - 5);
+
+      var base64 = doc.output('datauristring');
+      resolve(base64);
+    } catch(e) {
+      reject(e);
+    }
+  });
 }
 
 function gerarPDF(){
