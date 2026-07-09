@@ -596,17 +596,18 @@ select.st-sel{min-width:128px}
       <textarea id="mais-info" placeholder="Acrescente aqui qualquer informação adicional relevante…"></textarea>
     </div>
   </div>
-  <div class="row one">
-    <div class="field">
-      <label>Observações (caso tenha)</label>
-      <textarea id="obs" placeholder="Observações gerais sobre a arte ou o evento…"></textarea>
-    </div>
-  </div>
 
   <div class="sec">Referência Visual / Paleta de Cores</div>
   <div class="field">
-    <label>Imagem(ns) de referência de cor ou estilo <em style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</em></label>
-    <div class="ph" style="margin-bottom:10px">🎨 Envie imagens que sirvam de referência para as cores ou estilo da arte desejada. Pode ser um print, paleta, foto ou qualquer inspiração visual.</div>
+    <!-- Destaque: pergunta sobre paleta de cores -->
+    <div style="background:linear-gradient(135deg,var(--mint-bg2),var(--mint-bg));border:2px solid var(--teal);border-radius:var(--r);padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:15px;font-weight:800;color:var(--teal2);font-family:'Manrope',sans-serif;margin-bottom:10px">🎨 Qual será a Paleta de Cores?</div>
+      <div style="font-size:12px;color:var(--tm);margin-bottom:12px">Descreva as cores desejadas para a arte. Ex: azul royal e dourado, tons terrosos, cores da congregação, etc.</div>
+      <textarea id="f-paleta-texto" placeholder="Ex: Azul escuro com detalhes dourados, fundo branco limpo, sem cores muito vibrantes…" style="width:100%;min-height:80px;background:var(--sur);border:1.5px solid var(--bor);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--tx);outline:none;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+
+    <label style="margin-bottom:8px;display:block">Imagens de referência <em style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">(opcional — prints, fotos, exemplos de estilo)</em></label>
+    <div class="ph" style="margin-bottom:10px">Envie imagens que sirvam de referência para as cores ou estilo da arte desejada. Pode ser um print, paleta, foto ou qualquer inspiração visual.</div>
     <label class="upa" id="dz-paleta" for="paleta-input" style="display:block">
       <input type="file" id="paleta-input" accept="image/*" multiple onchange="hPaleta(this.files)"/>
       <div class="upi">🖼️</div>
@@ -941,9 +942,6 @@ select.st-sel{min-width:128px}
     <div class="login-field"><label>Mais Informações</label>
       <textarea id="e-mais-info" style="min-height:70px" placeholder="Informações adicionais…"></textarea>
     </div>
-    <div class="login-field"><label>Observações</label>
-      <textarea id="e-obs" style="min-height:70px" placeholder="Observações…"></textarea>
-    </div>
     <div class="login-field"><label>Status</label>
       <select id="e-status" style="background:var(--sur2);border:1.5px solid var(--bor);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;width:100%">
         <option>Aguardando</option><option>Em Produção</option><option>Em Analise</option>
@@ -1175,7 +1173,6 @@ function enviar(){
   var tema  =document.getElementById('tema').value.trim();
   var ref   =document.getElementById('ref').value.trim();
   var mais  =document.getElementById('mais-info').value.trim();
-  var obs   =document.getElementById('obs').value.trim();
 
   if(!cong||!nome||!localV){
     toast('Preencha Congregação, Nome do Evento e Local.',true);return;
@@ -1210,9 +1207,13 @@ function enviar(){
     referencia:    ref,
     datas:         datas.join(' || '),
     pregadores:    pregs.join(' || '),
-    paleta_cores:  paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '',
+    paleta_cores:  (function(){
+      var texto = document.getElementById('f-paleta-texto').value.trim();
+      var imgs  = paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '';
+      if(texto && imgs) return texto + ' | Imagens: ' + imgs;
+      return texto || imgs || '';
+    })(),
     mais_info:     mais,
-    observacoes:   obs,
     status:        'Aguardando',
     fotos_pregadores_json: fotosBase64.length>0 ? JSON.stringify(fotosBase64) : null,
     fotos_referencia_json: paletaFiles.length>0 ? JSON.stringify(paletaFiles.map(function(f){return {nome:f.n, data:f.s};})) : null
@@ -1273,9 +1274,13 @@ function enviar(){
       referencia: ref,
       datas: datas.join(' | '),
       pregadores: pregs.join(' | '),
-      paleta_cores: paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '',
+      paleta_cores: (function(){
+        var texto = document.getElementById('f-paleta-texto').value.trim();
+        var imgs  = paletaFiles.length>0 ? paletaFiles.map(function(f){return f.n;}).join(', ') : '';
+        if(texto && imgs) return texto + ' | Imagens: ' + imgs;
+        return texto || imgs || '';
+      })(),
       mais_info: mais,
-      observacoes: obs,
       link_pdf: linksStorage.pdf,
       links_fotos: linksStorage.fotos
     });
@@ -1481,7 +1486,7 @@ function gerarPDF(){
 // ── Limpar ──
 function limpar(){
   if(!confirm('Deseja realmente limpar todos os campos?')) return;
-  ['congregacao','local','nome-trab','tema','ref','mais-info','obs','solicitante']
+  ['congregacao','local','nome-trab','tema','ref','mais-info','solicitante']
     .forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('outros-sec').style.display='none';
   document.getElementById('outros-inp').value='';
@@ -1489,6 +1494,7 @@ function limpar(){
   numDatas=0; fMap={}; paletaFiles=[];
   renderPvPaleta();
   document.getElementById('pv-paleta').innerHTML='';
+  document.getElementById('f-paleta-texto').value='';
   addData();
   toast('Formulário limpo ✓');
 }
@@ -1558,7 +1564,6 @@ function exportarExcelSolic(){
       'Pregadores': (r.pregadores||'').replace(/ \|\| /g, ' | '),
       'Paleta de Cores': r.paleta_cores,
       'Mais Informações': r.mais_info,
-      'Observações': r.observacoes,
       'Status': r.status
     };
   });
@@ -1953,7 +1958,6 @@ async function dispararWhatsApp(tipo, dados){
     if(dados.pregadores) linhas.push('🎤 *Pregadores:* ' + dados.pregadores.replace(/ \|\| /g, ', ').replace(/Pregador \d+: /g, ''));
     if(dados.paleta_cores) linhas.push('🎨 *Paleta/Referência:* ' + dados.paleta_cores);
     if(dados.mais_info) linhas.push('💬 *Mais Info:* ' + dados.mais_info);
-    if(dados.observacoes) linhas.push('📝 *Observações:* ' + dados.observacoes);
 
     // Links do Storage
     if(dados.link_pdf || (dados.links_fotos && dados.links_fotos.length > 0)){
@@ -2113,7 +2117,7 @@ function verGDetalhe(id){
     ['Datas/Horários',(r.datas||'—').replace(/ \|\| /g,'<br>')],
     ['Pregadores',(r.pregadores||'—').replace(/ \|\| /g,'<br>')],
     ['Paleta de Cores',r.paleta_cores||'—'],
-    ['Mais Informações',r.mais_info||'—'],['Observações',r.observacoes||'—'],
+    ['Mais Informações',r.mais_info||'—'],
     ['Status',r.status||'—']
   ];
   document.getElementById('m-gdet-body').innerHTML=campos.map(function(c){
@@ -2425,7 +2429,6 @@ function abrirEditar(id){
   document.getElementById('e-pregadores').value   = (r.pregadores   || '').replace(/ \|\| /g,'\n');
   document.getElementById('e-paleta').value       = r.paleta_cores  || '';
   document.getElementById('e-mais-info').value    = r.mais_info     || '';
-  document.getElementById('e-obs').value          = r.observacoes   || '';
   document.getElementById('e-status').value       = r.status        || 'Aguardando';
   document.getElementById('m-editar-err').style.display = 'none';
   document.getElementById('m-editar').classList.add('on');
@@ -2447,7 +2450,6 @@ async function salvarEdicao(){
     pregadores:    document.getElementById('e-pregadores').value.trim().replace(/\n/g,' || '),
     paleta_cores:  document.getElementById('e-paleta').value.trim(),
     mais_info:     document.getElementById('e-mais-info').value.trim(),
-    observacoes:   document.getElementById('e-obs').value.trim(),
     status:        document.getElementById('e-status').value
   };
 
