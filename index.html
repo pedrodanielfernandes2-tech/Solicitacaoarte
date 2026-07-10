@@ -1430,6 +1430,21 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
     } catch(e){ console.warn('Erro upload foto referencia:', e.message); }
   }
 
+  // Salva URLs das fotos no banco para o trigger incluir no e-mail
+  if(id && id !== 'novo' && resultado.fotos.length > 0){
+    try {
+      await fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + id, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY
+        },
+        body: JSON.stringify({ fotos_urls_json: JSON.stringify(resultado.fotos) })
+      });
+    } catch(e){ console.warn('Erro salvar URLs fotos:', e.message); }
+  }
+
   return resultado;
 }
 
