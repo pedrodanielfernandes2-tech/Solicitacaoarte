@@ -826,6 +826,45 @@ select.st-sel{min-width:128px}
             </div>
           </div>
 
+          <!-- Permissões do Solicitante -->
+          <div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--bor)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <span style="font-size:22px">👤</span>
+              <div>
+                <div style="font-size:14px;font-weight:800;color:var(--tx);font-family:'Manrope',sans-serif">Permissões do Solicitante</div>
+                <div style="font-size:12px;color:var(--tm)">O que o solicitante pode fazer na aba Histórico</div>
+              </div>
+            </div>
+
+            <div style="background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+              <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+                <input type="checkbox" id="cfg-solic-editar" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer;margin-top:2px;flex-shrink:0"/>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--tx)">✏️ Pode Editar a solicitação</div>
+                  <div style="font-size:11px;color:var(--tm);margin-top:2px">O solicitante poderá alterar os dados da própria solicitação no Histórico</div>
+                </div>
+              </label>
+
+              <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+                <input type="checkbox" id="cfg-solic-excluir" style="width:18px;height:18px;accent-color:#ef4444;cursor:pointer;margin-top:2px;flex-shrink:0"/>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--tx)">🗑️ Pode Excluir a solicitação</div>
+                  <div style="font-size:11px;color:var(--tm);margin-top:2px">O solicitante poderá excluir a própria solicitação no Histórico</div>
+                </div>
+              </label>
+
+              <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+                <input type="checkbox" id="cfg-solic-ver-status" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer;margin-top:2px;flex-shrink:0"/>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--tx)">🏷️ Pode ver o Status da solicitação</div>
+                  <div style="font-size:11px;color:var(--tm);margin-top:2px">O solicitante verá o status atual (Aguardando, Em Produção, etc.) no Histórico</div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
           <div id="cfg-email-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:#dc2626;margin-top:14px"></div>
           <div id="cfg-email-ok" style="display:none;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:#065f46;margin-top:14px">✓ Configuração salva com sucesso!</div>
 
@@ -1701,6 +1740,8 @@ var _histDados = [];
 
 function carregarHistorico(){
   document.getElementById('hist-corpo').innerHTML = '<div class="hist-loading">⏳ Carregando histórico…</div>';
+  // Carrega permissões antes de renderizar
+  carregarPermissoes().then(function(){
 
   fetch(SUPA_URL + '/rest/v1/solicitacoes?select=id,num,data_solic,congregacao,solicitante,nome_trabalho,status&order=id.desc', {
     headers: {
@@ -1733,6 +1774,7 @@ function carregarHistorico(){
       '<div class="hist-empty"><div class="hist-empty-icon">📡</div>' +
       '<p>Não foi possível carregar o histórico.<br>' + err.message + '</p></div>';
   });
+  }); // fim carregarPermissoes().then
 }
 
 function atualizarStats(rows){
@@ -1762,6 +1804,29 @@ function statusBadge(s){
   return '<span class="badge-status '+cls+'">'+st+'</span>';
 }
 
+// ── Permissões do Solicitante ──
+var _permSolic = { editar: false, excluir: false, verStatus: true };
+
+function aplicarPermissoesSolicitante(cfg){
+  _permSolic.editar    = cfg.solic_pode_editar    === true;
+  _permSolic.excluir   = cfg.solic_pode_excluir   === true;
+  _permSolic.verStatus = cfg.solic_pode_ver_status !== false;
+}
+
+async function carregarPermissoes(){
+  var r = await SB.from('config_email').select('solic_pode_editar,solic_pode_excluir,solic_pode_ver_status').eq('id',1).single();
+  if(!r.error && r.data) aplicarPermissoesSolicitante(r.data);
+}
+
+async function excluirHistorico(id){
+  if(!confirm('Deseja realmente excluir esta solicitação?')) return;
+  var idNum = parseInt(id, 10);
+  var r = await SB.from('solicitacoes').delete().eq('id', idNum);
+  if(r.error){ toast('Erro ao excluir: ' + r.error.message, true); return; }
+  toast('Solicitação excluída!');
+  carregarHistorico();
+}
+
 function renderHistorico(rows){
   if(!rows || rows.length===0){
     document.getElementById('hist-corpo').innerHTML=
@@ -1774,17 +1839,24 @@ function renderHistorico(rows){
     '<th>Data Solicitação</th>'+
     '<th>Solicitante</th>'+
     '<th>Nome do Trabalho</th>'+
-    '<th>Status</th>'+
+    (_permSolic.verStatus ? '<th>Status</th>' : '')+
     '<th></th>'+
     '</tr></thead><tbody>';
   rows.forEach(function(r){
+    var acoes =
+      '<button title="Visualizar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirVerHistorico('+r.id+')">👁️</button>';
+    if(_permSolic.editar)
+      acoes += '<button title="Editar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirEditarHistorico('+r.id+')">✏️</button>';
+    if(_permSolic.excluir)
+      acoes += '<button title="Excluir" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="excluirHistorico('+r.id+')">🗑️</button>';
+
     html+='<tr>'+
       '<td style="color:var(--tm);font-size:12px">'+(r.num||'—')+'</td>'+
       '<td style="white-space:nowrap">'+fmtDataHist(r.data_solicitacao)+'</td>'+
       '<td>'+(r.solicitante||'—')+'</td>'+
       '<td><strong>'+(r.nome_trabalho||'—')+'</strong></td>'+
-      '<td>'+statusBadge(r.status)+'</td>'+
-      '<td><button title="Visualizar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirVerHistorico('+r.id+')">👁️</button></td>'+
+      (_permSolic.verStatus ? '<td>'+statusBadge(r.status)+'</td>' : '')+
+      '<td style="white-space:nowrap">'+acoes+'</td>'+
       '</tr>';
   });
   html+='</tbody></table></div>';
@@ -1961,6 +2033,12 @@ async function carregarConfigEmail(){
   document.getElementById('cfg-wpp-numeros').value = (r.data.whatsapp_numeros||'').replace(/,/g,'\n');
   document.getElementById('cfg-wpp-solic').checked = r.data.ativo_whatsapp_solicitacao !== false;
   document.getElementById('cfg-wpp-comentario').checked = r.data.ativo_whatsapp_comentario !== false;
+  // Permissões do Solicitante
+  document.getElementById('cfg-solic-editar').checked    = r.data.solic_pode_editar    === true;
+  document.getElementById('cfg-solic-excluir').checked   = r.data.solic_pode_excluir   === true;
+  document.getElementById('cfg-solic-ver-status').checked = r.data.solic_pode_ver_status !== false;
+  // Aplica permissões imediatamente no Histórico
+  aplicarPermissoesSolicitante(r.data);
 }
 
 async function salvarConfigEmail(){
@@ -1989,6 +2067,9 @@ async function salvarConfigEmail(){
     whatsapp_numeros: wppNums,
     ativo_whatsapp_solicitacao: wppSolic,
     ativo_whatsapp_comentario: wppComent,
+    solic_pode_editar:    document.getElementById('cfg-solic-editar').checked,
+    solic_pode_excluir:   document.getElementById('cfg-solic-excluir').checked,
+    solic_pode_ver_status: document.getElementById('cfg-solic-ver-status').checked,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
 
