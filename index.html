@@ -1253,12 +1253,28 @@ function enviar(){
     if(btn){btn.disabled=false;btn.textContent='📨 Enviar Formulário';}
     document.getElementById('pop').classList.add('on');
 
+    // Gera PDF igual ao exportado ANTES de limpar o formulário
+    var pdfBase64 = null;
+    try {
+      toast('Gerando PDF...');
+      pdfBase64 = await gerarPDFBase64({
+        num: newId, id: newId, data_solic: dsol,
+        congregacao: cong, solicitante: solit, nome_trabalho: nome,
+        local: localF, tema: tema, referencia: ref,
+        datas: datas.join(' || '), pregadores: pregs.join(' || '),
+        paleta_cores: document.getElementById('f-paleta-texto').value.trim(),
+        mais_info: mais
+      });
+    } catch(e) {
+      console.warn('Erro ao gerar PDF:', e.message);
+    }
+
     // Faz upload do PDF e fotos para o Supabase Storage e obtém links
     var linksStorage = { pdf: null, fotos: [] };
     try {
       toast('Fazendo upload dos arquivos...');
-      linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais);
-      toast('Upload concluído! Links gerados: PDF=' + (linksStorage.pdf?'Sim':'Não') + ' Fotos=' + linksStorage.fotos.length);
+      linksStorage = await uploadParaStorage(newId||'novo', nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, pdfBase64);
+      toast('Upload concluído! PDF=' + (linksStorage.pdf?'Sim':'Não') + ' Fotos=' + linksStorage.fotos.length);
     } catch(e) {
       toast('Aviso upload: ' + e.message, true);
       console.warn('Upload Storage falhou:', e.message);
@@ -1292,60 +1308,15 @@ function enviar(){
   });
 }
 // ── Upload PDF + Fotos para Supabase Storage ──
-async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais){
+async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref, datas, pregs, mais, pdfBase64){
   var resultado = { pdf: null, fotos: [] };
   var bucket = 'solicitacoes-pdf';
   var pasta = 'solic-' + id + '-' + Date.now();
 
-  // 1. Gera PDF em base64
-  try {
-    var pdfDoc = new jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-    var y = 20;
-    var maxW = 170;
-
-    // Cabeçalho
-    pdfDoc.setFillColor(20, 184, 166);
-    pdfDoc.rect(0, 0, 210, 28, 'F');
-    pdfDoc.setTextColor(255,255,255);
-    pdfDoc.setFontSize(14); pdfDoc.setFont('helvetica','bold');
-    pdfDoc.text('Assembleia de Deus Louveira', 15, 11);
-    pdfDoc.setFontSize(8); pdfDoc.setFont('helvetica','normal');
-    pdfDoc.text('SOLICITACAO DE ARTE / POST / MATERIAL', 15, 19);
-    y = 38;
-
-    var campos = [
-      ['Numero', String(id)],
-      ['Data Solicitacao', dsol||'-'],
-      ['Congregacao', cong||'-'],
-      ['Solicitante', solit||'-'],
-      ['Nome do Trabalho', nome||'-'],
-      ['Local', localF||'-'],
-      ['Tema', tema||'-'],
-      ['Referencia Biblica', ref||'-'],
-      ['Datas/Horarios', datas.join(' | ')],
-      ['Pregadores', pregs.join(' | ')],
-      ['Mais Informacoes', mais||'-'],
-    ];
-
-    campos.forEach(function(c){
-      if(y > 265){ pdfDoc.addPage(); y = 20; }
-      pdfDoc.setFontSize(8); pdfDoc.setFont('helvetica','bold');
-      pdfDoc.setTextColor(91,122,120);
-      pdfDoc.text(c[0].toUpperCase(), 15, y);
-      y += 5;
-      pdfDoc.setFontSize(11); pdfDoc.setFont('helvetica','normal');
-      pdfDoc.setTextColor(15,42,44);
-      var linhas = pdfDoc.splitTextToSize(String(c[1]), maxW);
-      linhas.forEach(function(l){ pdfDoc.text(l, 15, y); y += 6; });
-      y += 3;
-    });
-
-    // Footer
-    pdfDoc.setFontSize(8); pdfDoc.setTextColor(150,150,150);
-    pdfDoc.text('Prazos: 60 dias (ideal) - 30 dias (minimo)', 15, 285);
-
-    var pdfBase64 = pdfDoc.output('datauristring');
-    var pdfBlob = dataURItoBlob(pdfBase64);
+  // 1. Upload do PDF gerado pelo navegador (igual ao botão Exportar)
+  if(pdfBase64){
+    try {
+      var pdfBlob = dataURItoBlob(pdfBase64);
     var pdfNome = bucket + '/' + pasta + '/solicitacao-' + id + '.pdf';
 
     var uploadR = await fetch(SUPA_URL + '/storage/v1/object/' + pdfNome, {
@@ -1364,10 +1335,23 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
 
     if(uploadR.ok){
       resultado.pdf = SUPA_URL + '/storage/v1/object/public/' + pdfNome;
+      // Salva a URL do PDF no banco para o trigger incluir no e-mail
+      if(id && id !== 'novo'){
+        await fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + id, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPA_KEY,
+            'Authorization': 'Bearer ' + SUPA_KEY
+          },
+          body: JSON.stringify({ pdf_url: resultado.pdf })
+        });
+      }
     } else {
       console.warn('PDF upload failed:', uploadR.status, uploadText);
     }
-  } catch(e){ console.warn('Erro upload PDF:', e.message); }
+    } catch(e){ console.warn('Erro upload PDF:', e.message); }
+  }
 
   // 2. Upload das fotos dos pregadores
   var fotoIdx = 0;
