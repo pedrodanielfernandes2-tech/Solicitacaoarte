@@ -4,6 +4,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1.0" name="viewport"/>
 <title>Solicitação de Artes — Assembleia de Deus Louveira</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#14b8a6"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="AD Louveira"/>
+<link rel="apple-touch-icon" href="icon-512.svg"/>
+<link rel="icon" type="image/svg+xml" href="icon-512.svg"/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1430,6 +1439,21 @@ async function uploadParaStorage(id, nome, cong, solit, dsol, localF, tema, ref,
     } catch(e){ console.warn('Erro upload foto referencia:', e.message); }
   }
 
+  // Salva URLs das fotos no banco para o trigger incluir no e-mail
+  if(id && id !== 'novo' && resultado.fotos.length > 0){
+    try {
+      await fetch(SUPA_URL + '/rest/v1/solicitacoes?id=eq.' + id, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY
+        },
+        body: JSON.stringify({ fotos_urls_json: JSON.stringify(resultado.fotos) })
+      });
+    } catch(e){ console.warn('Erro salvar URLs fotos:', e.message); }
+  }
+
   return resultado;
 }
 
@@ -1845,6 +1869,7 @@ function renderHistorico(rows){
   rows.forEach(function(r){
     var acoes =
       '<button title="Visualizar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirVerHistorico('+r.id+')">👁️</button>';
+    acoes += '<button title="Duplicar solicitação" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="duplicarSolicitacao('+r.id+')">📋</button>';
     if(_permSolic.editar)
       acoes += '<button title="Editar" style="background:none;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;transition:transform .15s;opacity:.75" onclick="abrirEditarHistorico('+r.id+')">✏️</button>';
     if(_permSolic.excluir)
@@ -2555,6 +2580,79 @@ async function confirmarExcluir(){
 }
 
 // ── Editar via Histórico (busca dados completos do Supabase) ──
+async function duplicarSolicitacao(id){
+  var idNum = parseInt(id, 10);
+  toast('Carregando dados...');
+  var r = await SB.from('solicitacoes').select('*').eq('id', idNum).single();
+  if(r.error){ toast('Erro ao carregar: ' + r.error.message, true); return; }
+  var s = r.data;
+
+  // Navega para a aba Nova Solicitação
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-nova').classList.add('active');
+  document.querySelector('[onclick*="tab-nova"]') && document.querySelector('[onclick*="tab-nova"]').classList.add('active');
+
+  // Aguarda um tick para o DOM estar visível
+  setTimeout(function(){
+    // Preenche os campos do formulário com os dados da solicitação duplicada
+    var el = function(id){ return document.getElementById(id); };
+
+    if(el('f-cong'))    el('f-cong').value    = s.congregacao   || '';
+    if(el('f-solit'))   el('f-solit').value   = s.solicitante   || '';
+    if(el('f-nome'))    el('f-nome').value     = s.nome_trabalho || '';
+    if(el('f-tema'))    el('f-tema').value     = s.tema          || '';
+    if(el('f-ref'))     el('f-ref').value      = s.referencia    || '';
+    if(el('mais-info')) el('mais-info').value  = s.mais_info     || '';
+    if(el('f-paleta-texto')) el('f-paleta-texto').value = (s.paleta_cores||'').split(' | Imagens:')[0].trim();
+
+    // Local
+    if(el('f-local')){
+      el('f-local').value = s.local || '';
+      // Verifica se é OUTROS
+      var opcoes = Array.from(el('f-local').options).map(function(o){return o.value;});
+      if(s.local && !opcoes.includes(s.local)){
+        el('f-local').value = 'OUTROS';
+        if(el('f-outros')){
+          el('f-outros').value = s.local;
+          el('f-outros-wrap').style.display = 'block';
+        }
+      }
+    }
+
+    // Reconstrói datas (deixa em branco para o solicitante preencher as novas)
+    document.getElementById('f-datas-container').innerHTML = '';
+    _datasCount = 0;
+    adicionarData(); // Adiciona uma data vazia
+
+    // Reconstrói pregadores com os dados anteriores (sem as fotos)
+    document.getElementById('f-pregs-container').innerHTML = '';
+    _pregsCount = 0;
+    fMap = {};
+    if(s.pregadores){
+      var pregsArr = s.pregadores.split(' || ');
+      pregsArr.forEach(function(p, i){
+        adicionarPregador();
+        setTimeout(function(){
+          var bloco = document.getElementById('pb-' + i);
+          if(!bloco) return;
+          var cm = bloco.querySelector('.cm');
+          // Extrai nome do pregador
+          var nome = p.replace(/Pregador \d+:\s*/i, '').replace(/\s*\|\s*Foto:\s*(Sim|Não|Nao)/i, '').trim();
+          if(cm) cm.value = nome;
+          // Marca "Não" para foto (solicitante deve fazer upload das novas)
+          var radioNao = bloco.querySelector('[name="fp'+i+'"][value="nao"]');
+          if(radioNao) radioNao.checked = true;
+        }, 100 * (i + 1));
+      });
+    } else {
+      adicionarPregador();
+    }
+
+    toast('Solicitação duplicada! Atualize as datas e envie.');
+  }, 200);
+}
+
 async function abrirVerHistorico(id){
   var idNum = parseInt(id, 10);
   var r = await SB.from('solicitacoes').select('*').eq('id', idNum).single();
