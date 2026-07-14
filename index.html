@@ -1628,18 +1628,22 @@ function gerarPDF(){
 }
 
 // ── Limpar ──
-function limpar(){
-  if(!confirm('Deseja realmente limpar todos os campos?')) return;
+function resetFormulario(){
   ['congregacao','local','nome-trab','tema','ref','mais-info','solicitante']
     .forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('outros-sec').style.display='none';
-  document.getElementById('outros-inp').value='';
-  document.getElementById('datas-cont').innerHTML='';
+  var os=document.getElementById('outros-sec'); if(os)os.style.display='none';
+  var oi=document.getElementById('outros-inp'); if(oi)oi.value='';
+  var dc=document.getElementById('datas-cont'); if(dc)dc.innerHTML='';
   numDatas=0; fMap={}; paletaFiles=[];
   renderPvPaleta();
-  document.getElementById('pv-paleta').innerHTML='';
-  document.getElementById('f-paleta-texto').value='';
+  var pp=document.getElementById('pv-paleta'); if(pp)pp.innerHTML='';
+  var fp=document.getElementById('f-paleta-texto'); if(fp)fp.value='';
   addData();
+}
+
+function limpar(){
+  if(!confirm('Deseja realmente limpar todos os campos?')) return;
+  resetFormulario();
   toast('Formulário limpo ✓');
 }
 
@@ -2591,7 +2595,7 @@ async function duplicarSolicitacao(id){
   switchTab('formulario');
 
   // Reinicia o formulário limpo primeiro
-  limpar();
+  resetFormulario();
 
   // Aguarda um tick para o DOM estar visível e limpo
   setTimeout(function(){
