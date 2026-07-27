@@ -907,30 +907,12 @@ select.st-sel{min-width:128px}
     <div class="login-err" id="le-err"></div>
     <button class="pok" id="btn-le" style="width:100%;margin-top:10px" onclick="doLoginEquipe()">Entrar</button>
     <div style="text-align:center;margin-top:12px">
-      <a href="#" onclick="abrirRecuperarSenha();return false;" style="font-size:12px;color:var(--teal2);text-decoration:underline;font-weight:600">Esqueci minha senha</a>
     </div>
     <button class="pok" style="width:100%;margin-top:8px;background:transparent;color:var(--tm);border:1px solid var(--bor)" onclick="document.getElementById('m-login-equipe').classList.remove('on')">Cancelar</button>
   </div>
 </div>
 
 <!-- Modal: Recuperar Senha -->
-<div class="pop" id="m-recuperar">
-  <div class="pbox login-modal-box">
-    <div class="picon">🔑</div>
-    <div class="ptit" style="font-size:18px">Recuperar Senha</div>
-    <div class="pmsg" style="margin-bottom:18px">Informe seu e-mail. Enviaremos um link para redefinir sua senha.</div>
-    <div class="login-field" style="text-align:left">
-      <label>E-mail</label>
-      <input type="email" id="rec-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')enviarRecuperarSenha()"/>
-    </div>
-    <div class="login-err" id="rec-err"></div>
-    <div id="rec-success" style="display:none;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:var(--r-sm);padding:12px;font-size:13px;color:#065f46;margin-top:10px">
-      ✓ E-mail enviado! Verifique sua caixa de entrada.
-    </div>
-    <button class="pok" id="btn-rec" style="width:100%;margin-top:10px" onclick="enviarRecuperarSenha()">Enviar Link</button>
-    <button class="pok" style="width:100%;margin-top:8px;background:transparent;color:var(--tm);border:1px solid var(--bor)" onclick="document.getElementById('m-recuperar').classList.remove('on');document.getElementById('m-login-equipe').classList.add('on')">Voltar ao Login</button>
-  </div>
-</div>
 
 <!-- Modal: Confirmar Exclusão -->
 <div class="pop" id="m-excluir">
@@ -1939,40 +1921,8 @@ function abrirLoginEquipe(){
   document.getElementById('m-login-equipe').classList.add('on');
 }
 
-function abrirRecuperarSenha(){
-  document.getElementById('m-login-equipe').classList.remove('on');
-  document.getElementById('rec-err').style.display='none';
-  document.getElementById('rec-success').style.display='none';
-  document.getElementById('rec-email').value=document.getElementById('le-email').value||'';
-  document.getElementById('m-recuperar').classList.add('on');
-}
 
-async function enviarRecuperarSenha(){
-  var email = document.getElementById('rec-email').value.trim();
-  var err   = document.getElementById('rec-err');
-  var ok    = document.getElementById('rec-success');
-  var btn   = document.getElementById('btn-rec');
-  err.style.display='none'; ok.style.display='none';
 
-  if(!email){
-    err.textContent='Informe um e-mail válido.';
-    err.style.display='block';
-    return;
-  }
-
-  btn.disabled=true; btn.textContent='Enviando…';
-  var resp = await SB.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href
-  });
-  btn.disabled=false; btn.textContent='Enviar Link';
-
-  if(resp.error){
-    err.textContent='Erro ao enviar: ' + resp.error.message;
-    err.style.display='block';
-    return;
-  }
-  ok.style.display='block';
-}
 
 async function doLoginEquipe(){
   var email = document.getElementById('le-email').value.trim();
@@ -2478,7 +2428,7 @@ function renderGUsers(rows){
       '<td><span class="g-badge '+ac+'">'+albl+'</span></td>'+
       '<td style="text-align:center"><input type="checkbox" '+notifChecked+' onchange="toggleNotificacao(\''+u.id+'\',this.checked)" style="width:18px;height:18px;accent-color:var(--teal2);cursor:pointer" title="Recebe notificações por e-mail"/></td>'+
       '<td><button class="btn btn-p" style="padding:4px 10px;font-size:10px" onclick="toggleGUser(\''+u.id+'\','+(u.ativo!==false)+')">'+toggleLbl+'</button> '+
-        '<button class="btn" style="padding:4px 10px;font-size:10px;background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="resetarSenha(\''+u.email+'\')">🔑 Senha</button></td>'+
+        '</td>'+
       '</tr>';
   }).join('');
 }
@@ -2488,16 +2438,6 @@ async function toggleNotificacao(id, ativo){
   toast(ativo ? 'Notificações ativadas.' : 'Notificações desativadas.');
 }
 
-async function resetarSenha(email){
-  if(!confirm('Enviar e-mail de redefinição de senha para ' + email + '?')) return;
-  var r = await SB.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
-  });
-  if(r.error){
-    toast('Erro: ' + r.error.message, true);
-  } else {
-    toast('E-mail de redefinição enviado para ' + email + ' ✓');
-  }
 }
 
 function openNovoUsuario(){
