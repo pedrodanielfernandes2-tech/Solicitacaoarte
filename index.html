@@ -1820,7 +1820,10 @@ var _histDados = [];
 function carregarHistorico(){
   document.getElementById('hist-corpo').innerHTML = '<div class="hist-loading">⏳ Carregando histórico…</div>';
   // Carrega permissões e prazos antes de renderizar
-  Promise.all([carregarPermissoes(), carregarConfigPrazos()]).then(function(){
+  Promise.all([
+    carregarPermissoes().catch(function(){ return null; }),
+    carregarConfigPrazos().catch(function(){ return null; })
+  ]).then(function(){
 
   fetch(SUPA_URL + '/rest/v1/solicitacoes?select=id,num,data_solic,congregacao,solicitante,nome_trabalho,status,prazo_revisao&order=id.desc', {
     headers: {
@@ -1897,8 +1900,10 @@ function aplicarPermissoesSolicitante(cfg){
 var _configPrazos = null;
 
 async function carregarConfigPrazos(){
-  var r = await SB.from('config_prazos').select('*').eq('id',1).single();
-  if(!r.error && r.data) _configPrazos = r.data;
+  try {
+    var r = await SB.from('config_prazos').select('*').eq('id',1).single();
+    if(!r.error && r.data) _configPrazos = r.data;
+  } catch(e) { console.warn('config_prazos indisponível:', e); }
   return _configPrazos;
 }
 
