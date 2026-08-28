@@ -1,5 +1,5 @@
 // Service Worker — AD Louveira
-const CACHE = 'adlouveira-v1';
+const CACHE = 'adlouveira-v2';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
