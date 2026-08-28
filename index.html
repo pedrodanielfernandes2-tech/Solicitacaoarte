@@ -1843,7 +1843,8 @@ function carregarHistorico(){
         congregacao:      r.congregacao || '',
         solicitante:      r.solicitante || '',
         nome_trabalho:    r.nome_trabalho || '',
-        status:           r.status || 'Aguardando'
+        status:           r.status || 'Aguardando',
+        prazo_revisao:    r.prazo_revisao || null
       };
     });
     atualizarStats(_histDados);
@@ -1935,37 +1936,39 @@ async function carregarUiPrazos(){
 }
 
 function gerarContadorPrazo(r){
-  // Não mostra para status finais
-  var statusFinais = ['Revisão','Entregue','Concluido','Concluído'];
-  if(statusFinais.includes(r.status||'')) return '';
-  if(!_configPrazos || !_configPrazos.ativo) return '';
-  if(!r.prazo_revisao) return '';
-  // Solicitante só vê se configurado
-  var isAdmin = (_gUser && _gPerfil);
-  if(!isAdmin && !_configPrazos.mostrar_contador_solicitante) return '';
+  try {
+    // Não mostra para status finais
+    var statusFinais = ['Revisão','Entregue','Concluido','Concluído'];
+    if(statusFinais.includes(r.status||'')) return '';
+    if(!_configPrazos || !_configPrazos.ativo) return '';
+    if(!r.prazo_revisao) return '';
+    // Solicitante só vê se configurado
+    var isAdmin = (_gUser && _gPerfil);
+    if(!isAdmin && !_configPrazos.mostrar_contador_solicitante) return '';
 
-  var prazo = new Date(r.prazo_revisao);
-  var hoje = new Date(); hoje.setHours(0,0,0,0);
-  var diasRestantes = Math.ceil((prazo - hoje) / 864e5);
-  var totalDias = _configPrazos.dias_prazo || 15;
-  var pct = Math.max(0, Math.min(100, (diasRestantes / totalDias) * 100));
+    var prazo = new Date(r.prazo_revisao);
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+    var diasRestantes = Math.ceil((prazo - hoje) / 864e5);
+    var totalDias = _configPrazos.dias_prazo || 15;
+    var pct = Math.max(0, Math.min(100, (diasRestantes / totalDias) * 100));
 
-  var cor, txt;
-  if(diasRestantes < 0){
-    cor = '#ef4444'; txt = 'Prazo vencido há '+ Math.abs(diasRestantes) +'d';
-  } else if(diasRestantes <= 3){
-    cor = '#ef4444'; txt = diasRestantes + 'd restantes';
-  } else if(diasRestantes <= 7){
-    cor = '#f59e0b'; txt = diasRestantes + 'd restantes';
-  } else {
-    cor = '#10b981'; txt = diasRestantes + 'd restantes';
-  }
+    var cor, txt;
+    if(diasRestantes < 0){
+      cor = '#ef4444'; txt = 'Vencido há '+ Math.abs(diasRestantes) +'d';
+    } else if(diasRestantes <= 3){
+      cor = '#ef4444'; txt = diasRestantes + 'd restantes';
+    } else if(diasRestantes <= 7){
+      cor = '#f59e0b'; txt = diasRestantes + 'd restantes';
+    } else {
+      cor = '#10b981'; txt = diasRestantes + 'd restantes';
+    }
 
-  return '<div style="min-width:90px">'+
-    '<div style="font-size:10px;color:'+cor+';font-weight:700;margin-bottom:3px">'+txt+'</div>'+
-    '<div style="background:#e5e7eb;border-radius:4px;height:5px;overflow:hidden">'+
-    '<div style="background:'+cor+';width:'+pct+'%;height:100%;border-radius:4px;transition:width .3s"></div>'+
-    '</div></div>';
+    return '<div style="min-width:90px">'+
+      '<div style="font-size:10px;color:'+cor+';font-weight:700;margin-bottom:3px">'+txt+'</div>'+
+      '<div style="background:#e5e7eb;border-radius:4px;height:5px;overflow:hidden">'+
+      '<div style="background:'+cor+';width:'+pct+'%;height:100%;border-radius:4px"></div>'+
+      '</div></div>';
+  } catch(e) { return ''; }
 }
 
 async function fecharPopSucesso(){
