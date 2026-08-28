@@ -1920,7 +1920,7 @@ async function salvarConfigPrazos(){
     dias_aviso_email: parseInt(document.getElementById('cfg-prazo-dias-aviso').value)||3,
     updated_at: new Date().toISOString()
   };
-  var r = await SB.from('config_prazos').upsert({id:1, ...payload});
+  var r = await SB.from('config_prazos').upsert(Object.assign({id:1}, payload));
   if(r.error){ err.textContent='Erro: '+r.error.message; err.style.display='block'; return; }
   _configPrazos = payload;
   ok.style.display='block';
