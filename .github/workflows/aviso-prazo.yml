@@ -1,0 +1,20 @@
+name: Aviso de Prazo de Revisão
+
+on:
+  schedule:
+    # Roda todo dia às 08:00 UTC (05:00 horário de Brasília)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  verificar-prazos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar e enviar avisos de prazo
+        run: |
+          curl -s -X POST \
+            "https://tcvqkkgirxdarldhdeoz.supabase.co/functions/v1/aviso-prazo" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d '{}' \
+            -w "\nStatus: %{http_code}\n"
