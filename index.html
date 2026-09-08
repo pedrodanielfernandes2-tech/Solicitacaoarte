@@ -2800,6 +2800,32 @@ async function abrirVerHistorico(id){
       '<div style="font-size:11px;font-weight:700;color:var(--tm);min-width:130px;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px">' + c[0] + '</div>' +
       '<div style="font-size:13px;color:var(--tx)">' + c[1] + '</div></div>';
   }).join('');
+
+  // Seção de anexos
+  var anexosHtml = '';
+  if(s.pdf_url || s.fotos_urls_json){
+    anexosHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bor)">';
+    anexosHtml += '<div style="font-size:11px;font-weight:700;color:var(--teal2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📎 Anexos</div>';
+    anexosHtml += '<div style="display:flex;flex-direction:column;gap:6px">';
+    if(s.pdf_url){
+      anexosHtml += '<a href="'+s.pdf_url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bor);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--teal2);text-decoration:none">📄 PDF da Solicitação</a>';
+    }
+    if(s.fotos_urls_json){
+      try {
+        var fotos = JSON.parse(s.fotos_urls_json);
+        var pregs = fotos.filter(function(f){ return f.tipo==='pregador'; });
+        var refs  = fotos.filter(function(f){ return f.tipo==='referencia'; });
+        pregs.forEach(function(f, i){
+          anexosHtml += '<a href="'+f.url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bor);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--teal2);text-decoration:none">👤 Pregador '+(i+1)+' - '+f.nome+'</a>';
+        });
+        refs.forEach(function(f, i){
+          anexosHtml += '<a href="'+f.url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bor);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--teal2);text-decoration:none">🎨 Referência '+(i+1)+' - '+f.nome+'</a>';
+        });
+      } catch(e){}
+    }
+    anexosHtml += '</div></div>';
+  }
+  body += anexosHtml;
   // Usa o modal de detalhe existente (m-gdet) ou abre um novo popup simples
   var pop = document.getElementById('m-gdet');
   if(pop){
