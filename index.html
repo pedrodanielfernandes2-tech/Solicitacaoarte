@@ -686,6 +686,11 @@ select.st-sel{min-width:128px}
           <option value="Entregue">Entregue</option>
           <option value="Concluido">Concluído</option>
         </select>
+        <label style="display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;color:var(--tm);cursor:pointer;white-space:nowrap;padding:8px 13px;background:var(--sur2);border:1.5px solid var(--bor);border-radius:20px;box-shadow:var(--shadow-inset);transition:border-color .2s,box-shadow .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--bor)'">
+          <input type="checkbox" id="hist-show-concluidas" onchange="filtrarHistorico();this.closest('label').querySelector('.tog-track').style.background=this.checked?'var(--teal2)':'#cbd5e1';this.closest('label').querySelector('.tog-thumb').style.transform=this.checked?'translateX(16px)':'translateX(0)';this.closest('label').style.color=this.checked?'var(--teal2)':'var(--tm)'" style="display:none"/>
+          <span class="tog-track" style="display:inline-flex;align-items:center;width:34px;height:19px;background:#cbd5e1;border-radius:99px;padding:2px;flex-shrink:0;transition:background .2s"><span class="tog-thumb" style="display:block;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform .2s"></span></span>
+          Exibir Concluídas
+        </label>
       </div>
 
       <div id="hist-corpo">
@@ -2054,13 +2059,16 @@ function renderHistorico(rows){
 function filtrarHistorico(){
   var busca = document.getElementById('hist-busca').value.toLowerCase();
   var statusF = document.getElementById('hist-status-filter').value;
+  var showConcluidas = document.getElementById('hist-show-concluidas').checked;
   var filtrado = _histDados.filter(function(r){
     var matchBusca = !busca ||
       (r.nome_trabalho||'').toLowerCase().indexOf(busca)>=0 ||
       (r.solicitante||'').toLowerCase().indexOf(busca)>=0 ||
       (r.data_solicitacao||'').toLowerCase().indexOf(busca)>=0;
     var matchStatus = !statusF || (r.status||'Aguardando')===statusF;
-    return matchBusca && matchStatus;
+    var isConcluida = (r.status||'')==='Concluido' || (r.status||'')==='Concluído';
+    var matchConcluida = showConcluidas || !isConcluida;
+    return matchBusca && matchStatus && matchConcluida;
   });
   renderHistorico(filtrado);
 }
