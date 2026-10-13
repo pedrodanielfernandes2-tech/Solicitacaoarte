@@ -1857,7 +1857,7 @@ function carregarHistorico(){
       };
     });
     atualizarStats(_histDados);
-    renderHistorico(_histDados);
+    filtrarHistorico();
   })
   .catch(function(err){
     console.error('Historico error:', err);
@@ -2330,12 +2330,33 @@ async function dispararWhatsApp(tipo, dados){
   });
 }
 
-async function carregarGSolic(){
-  document.getElementById('g-tb-solic').innerHTML='<tr><td colspan="7" class="g-loading">⏳ Carregando…</td></tr>';
-  var r = await SB.from('solicitacoes').select('*').order('id',{ascending:false});
+var _gPage = 0;
+var _gPageSize = 20;
+var _gHasMore = false;
+var _gLoading = false;
+
+async function carregarGSolic(reset){
+  if(_gLoading) return;
+  if(reset !== false){ _gPage = 0; _gSolic = []; }
+  _gLoading = true;
+  var from = _gPage * _gPageSize;
+  var to   = from + _gPageSize - 1;
+  if(_gPage === 0){
+    document.getElementById('g-tb-solic').innerHTML='<tr><td colspan="7" class="g-loading">⏳ Carregando…</td></tr>';
+  }
+  var r = await SB.from('solicitacoes').select('*').order('id',{ascending:false}).range(from, to);
+  _gLoading = false;
   if(r.error){ toast('Erro: '+r.error.message, true); return; }
-  _gSolic = r.data || [];
-  atualizarGStats(_gSolic);
+  var rows = r.data || [];
+  _gSolic = _gSolic.concat(rows);
+  _gHasMore = rows.length === _gPageSize;
+  if(_gHasMore) _gPage++;
+  // Stats: busca count total separado apenas na primeira carga
+  if(from === 0){
+    var rc = await SB.from('solicitacoes').select('status');
+    if(!rc.error) atualizarGStats(rc.data || []);
+    else atualizarGStats(_gSolic);
+  }
   filtrarGSolic();
 }
 
@@ -2388,11 +2409,15 @@ function filtrarGSolic(){
 }
 
 function renderGSolic(rows){
+  var tbody = document.getElementById('g-tb-solic');
+  // Remove botão anterior se existir
+  var oldBtn = document.getElementById('g-load-more-row');
+  if(oldBtn) oldBtn.remove();
   if(!rows.length){
-    document.getElementById('g-tb-solic').innerHTML='<tr><td colspan="7" class="g-empty"><div class="g-empty-icon">📭</div><p>Nenhuma solicitação encontrada.</p></td></tr>';
+    tbody.innerHTML='<tr><td colspan="7" class="g-empty"><div class="g-empty-icon">📭</div><p>Nenhuma solicitação encontrada.</p></td></tr>';
     return;
   }
-  document.getElementById('g-tb-solic').innerHTML = rows.map(function(r){
+  tbody.innerHTML = rows.map(function(r){
     var st=r.status||'Aguardando';
     var cls=gStMap[st]||'aguardando';
     var opts=gStOpts.map(function(o){ return '<option value="'+o+'"'+(o===st?' selected':'')+'>'+o+'</option>'; }).join('');
@@ -2410,6 +2435,17 @@ function renderGSolic(rows){
       '</td>'+
       '</tr>';
   }).join('');
+  // Botão "Carregar mais" — só aparece se não há filtro ativo e há mais registros
+  var busca = document.getElementById('g-busca').value;
+  var sf    = document.getElementById('g-f-status').value;
+  if(_gHasMore && !busca && !sf){
+    var tr = document.createElement('tr');
+    tr.id = 'g-load-more-row';
+    tr.innerHTML = '<td colspan="7" style="text-align:center;padding:14px 0">' +
+      '<button onclick="carregarGSolic(false)" style="background:var(--sur2);border:1.5px solid var(--bor);border-radius:20px;padding:8px 22px;font-size:12px;font-weight:600;color:var(--teal2);cursor:pointer;transition:background .2s" onmouseover="this.style.background=\'var(--bor)\'" onmouseout="this.style.background=\'var(--sur2)\'">Carregar mais 20 ↓</button>' +
+    '</td>';
+    tbody.appendChild(tr);
+  }
 }
 
 async function updateGStatus(id, sel){
