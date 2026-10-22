@@ -2552,8 +2552,9 @@ async function enviarComentario(){
   var input = document.getElementById('m-gdet-novo-comentario');
   var msg = input.value.trim();
   if(!msg) return;
-  var solicId = document.getElementById('m-gdet').dataset.solicId;
-  var userName = _gPerfil ? _gPerfil.nome : (_gUser ? _gUser.email : 'Desconhecido');
+  var solicId = parseInt(document.getElementById('m-gdet').dataset.solicId, 10);
+  if(!solicId){ toast('Erro: solicitação não identificada.', true); return; }
+  var userName = (_gPerfil && _gPerfil.nome) ? _gPerfil.nome : (_gUser ? _gUser.email : 'Usuário');
 
   var r = await SB.from('comentarios').insert({
     solicitacao_id: solicId,
