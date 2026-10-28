@@ -738,6 +738,7 @@ select.st-sel{min-width:128px}
 
       <div class="gestao-sub">
         <button class="gestao-sub-btn active" onclick="showGestaoPage(this,'g-solic')">📋 Solicitações</button>
+        <button class="gestao-sub-btn" onclick="showGestaoPage(this,'g-dash')">📊 Dashboard</button>
         <button class="gestao-sub-btn" onclick="showGestaoPage(this,'g-audit')">🕓 Auditoria</button>
         <button class="gestao-sub-btn" id="g-nav-users" style="display:none" onclick="showGestaoPage(this,'g-users')">👥 Usuários</button>
         <button class="gestao-sub-btn" id="g-nav-email" style="display:none" onclick="showGestaoPage(this,'g-email')">⚙️ Configuração</button>
@@ -774,6 +775,13 @@ select.st-sel{min-width:128px}
             <th>#</th><th>Data</th><th>Congregação</th><th>Solicitante</th>
             <th>Nome do Trabalho</th><th>Status</th><th>Ações</th>
           </tr></thead><tbody id="g-tb-solic"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="gestao-page" id="g-dash">
+        <div id="g-dash-corpo" style="padding-top:4px">
+          <div style="text-align:center;color:var(--tm);padding:40px 0;font-size:13px">⏳ Carregando dashboard…</div>
         </div>
       </div>
 
@@ -2304,6 +2312,197 @@ function showGestaoPage(btnEl, id){
   if(id==='g-audit') carregarGAudit();
   if(id==='g-users') carregarGUsers();
   if(id==='g-email'){ carregarConfigEmail(); carregarUiPrazos(); }
+  if(id==='g-dash') carregarGDash();
+}
+
+// ══ DASHBOARD ══
+async function carregarGDash(){
+  var corpo = document.getElementById('g-dash-corpo');
+  corpo.innerHTML = '<div style="text-align:center;color:var(--tm);padding:40px 0;font-size:13px">⏳ Carregando dashboard…</div>';
+
+  // Busca dados em paralelo
+  var [rSolic, rAudit] = await Promise.all([
+    SB.from('solicitacoes').select('id,status,congregacao,created_at,nome_trabalho,solicitante').order('created_at',{ascending:false}),
+    SB.from('auditoria').select('created_at,usuario_nome,status_anterior,novo_status,solicitacoes(nome_trabalho)').order('created_at',{ascending:false}).limit(5)
+  ]);
+
+  if(rSolic.error){ corpo.innerHTML='<div style="color:var(--acc);padding:20px">Erro ao carregar dados.</div>'; return; }
+
+  var solic = rSolic.data || [];
+  var audit = rAudit.data || [];
+
+  // Contagens por status
+  var tot=solic.length, ag=0, pr=0, an=0, re=0, en=0, co=0;
+  var porCong={};
+  var porMes={};
+  solic.forEach(function(s){
+    var st=s.status||'Aguardando';
+    if(st==='Aguardando') ag++;
+    else if(st==='Em Produção') pr++;
+    else if(st==='Em Analise') an++;
+    else if(st==='Revisão') re++;
+    else if(st==='Entregue') en++;
+    else if(st==='Concluido'||st==='Concluído') co++;
+    // Congregação
+    var c=s.congregacao||'Outros';
+    porCong[c]=(porCong[c]||0)+1;
+    // Mês
+    if(s.created_at){
+      var d=new Date(s.created_at);
+      var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      porCong[c];
+      porMes[k]=(porMes[k]||0)+1;
+    }
+  });
+
+  // Top congregações
+  var topCong=Object.entries(porCong).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+
+  // Últimos 6 meses
+  var meses6=[];
+  for(var i=5;i>=0;i--){
+    var d=new Date(); d.setMonth(d.getMonth()-i);
+    var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    var label=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()];
+    meses6.push({k:k,label:label,val:porMes[k]||0});
+  }
+
+  // Últimas 5 solicitações
+  var ultimas=solic.slice(0,5);
+
+  var stBadge={
+    'Aguardando':'background:#fef3c7;color:#92400e',
+    'Em Produção':'background:#dbeafe;color:#1e40af',
+    'Em Analise':'background:#ede9fe;color:#5b21b6',
+    'Revisão':'background:#ede9fe;color:#5b21b6',
+    'Entregue':'background:#d1fae5;color:#065f46',
+    'Concluido':'background:#e0f2fe;color:#0c4a6e',
+    'Concluído':'background:#e0f2fe;color:#0c4a6e',
+  };
+
+  function fmtData(iso){
+    if(!iso) return '—';
+    var d=new Date(iso);
+    return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  }
+
+  var ultiHtml=ultimas.map(function(s){
+    var st=s.status||'Aguardando';
+    var bg=stBadge[st]||'background:#f1f5f9;color:#475569';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bor)">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:12.5px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(s.nome_trabalho||'—')+'</div>' +
+        '<div style="font-size:11px;color:var(--ts);margin-top:2px">'+(s.congregacao||'—')+' · '+fmtData(s.created_at)+'</div>' +
+      '</div>' +
+      '<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;'+bg+'">'+st+'</span>' +
+    '</div>';
+  }).join('');
+
+  var congHtml=topCong.map(function(c,i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--sur2);border:1px solid var(--bor);border-radius:8px">' +
+      '<div style="font-family:Manrope,sans-serif;font-size:11px;font-weight:800;color:var(--teal2);width:16px;text-align:center;flex-shrink:0">'+(i+1)+'</div>' +
+      '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c[0]+'</div>' +
+      '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--teal2)">'+c[1]+'</div>' +
+    '</div>';
+  }).join('');
+
+  var auditHtml=(audit||[]).map(function(a){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bor)">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--tx)">'+(a.usuario_nome||'—')+'</div>' +
+        '<div style="font-size:11px;color:var(--ts)">'+((a.solicitacoes&&a.solicitacoes.nome_trabalho)||'—')+'</div>' +
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0">' +
+        '<div style="font-size:10px;color:var(--ts)">'+fmtData(a.created_at)+'</div>' +
+        '<div style="font-size:10px;font-weight:600;color:var(--teal2);margin-top:2px">'+(a.status_anterior||'—')+' → '+(a.novo_status||'—')+'</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Meses para canvas
+  var mesesLabels=meses6.map(function(m){return m.label;});
+  var mesesVals=meses6.map(function(m){return m.val;});
+
+  function kpi(cor, emoji, num, lbl){
+    return '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06),0 6px 18px -6px rgba(15,42,44,.09);position:relative;overflow:hidden">' +
+      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+cor+'"></div>' +
+      '<div style="font-size:18px;margin-bottom:6px">'+emoji+'</div>' +
+      '<div style="font-family:Manrope,sans-serif;font-size:26px;font-weight:800;color:var(--tx);line-height:1;font-variant-numeric:tabular-nums">'+num+'</div>' +
+      '<div style="font-size:11px;font-weight:600;color:var(--tm);margin-top:3px">'+lbl+'</div>' +
+    '</div>';
+  }
+
+  corpo.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">' +
+      kpi('#14b8a6','📋',tot,'Total') +
+      kpi('#f59e0b','⏳',ag,'Aguardando') +
+      kpi('#5b9bd5','🎨',pr,'Em Produção') +
+      kpi('#34d399','✅',(en+co),'Entregues / Concluídas') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px">' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:14px">Solicitações por Mês <span style="font-family:Inter,sans-serif;font-size:11px;font-weight:500;color:var(--ts)">últimos 6 meses</span></div>' +
+        '<div style="position:relative;height:160px"><canvas id="g-dash-chart"></canvas></div>' +
+      '</div>' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:14px">Top Congregações</div>' +
+        '<div style="display:flex;flex-direction:column;gap:7px">'+congHtml+'</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px">Últimas Solicitações</div>' +
+        ultiHtml +
+      '</div>' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px">Últimas Alterações</div>' +
+        auditHtml +
+      '</div>' +
+    '</div>';
+
+  // Chart.js
+  setTimeout(function(){
+    var canvas=document.getElementById('g-dash-chart');
+    if(!canvas) return;
+    var isDark=document.documentElement.dataset.theme==='dark'||
+      (!document.documentElement.dataset.theme&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+    var gc=isDark?'rgba(255,255,255,.07)':'rgba(15,42,44,.06)';
+    var lc=isDark?'#7db5ae':'#5b7a78';
+    new Chart(canvas.getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:mesesLabels,
+        datasets:[{
+          label:'Solicitações',
+          data:mesesVals,
+          backgroundColor:'rgba(20,184,166,.7)',
+          borderColor:'#0d9488',
+          borderWidth:1.5,
+          borderRadius:5,
+          borderSkipped:false
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:isDark?'#0f2427':'#fff',
+            titleColor:isDark?'#e2f8f5':'#0f2a2c',
+            bodyColor:isDark?'#7db5ae':'#5b7a78',
+            borderColor:isDark?'#1e4449':'#cceee8',
+            borderWidth:1,cornerRadius:8,padding:9,
+            titleFont:{family:'Manrope',size:12,weight:'700'},
+            bodyFont:{family:'Inter',size:11}
+          }
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:lc,font:{family:'Inter',size:11,weight:'600'}},border:{display:false}},
+          y:{grid:{color:gc},ticks:{color:lc,font:{family:'Inter',size:11},stepSize:5},border:{display:false},beginAtZero:true}
+        }
+      }
+    });
+  },100);
 }
 
 async function carregarConfigEmail(){
@@ -2711,7 +2910,7 @@ async function enviarComentario(){
 
 async function carregarGAudit(){
   document.getElementById('g-tb-audit').innerHTML='<tr><td colspan="5" class="g-loading">⏳ Carregando…</td></tr>';
-  var r = await SB.from('auditoria').select('*, solicitacoes(nome_trabalho)').order('created_at',{ascending:false}).limit(200);
+  var r = await SB.from('auditoria').select('*, solicitacoes(nome_trabalho)').order('created_at',{ascending:false}).limit(10);
   if(r.error){ toast('Erro: '+r.error.message, true); return; }
   _gAudit = r.data || [];
   filtrarGAudit();
