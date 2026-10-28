@@ -2424,37 +2424,37 @@ async function carregarGDash(){
   var mesesVals=meses6.map(function(m){return m.val;});
 
   function kpi(cor, emoji, num, lbl){
-    return '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06),0 6px 18px -6px rgba(15,42,44,.09);position:relative;overflow:hidden">' +
+    return '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:14px 14px 12px;box-shadow:0 1px 3px rgba(15,42,44,.06),0 6px 18px -6px rgba(15,42,44,.09);position:relative;overflow:hidden;min-width:0">' +
       '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+cor+'"></div>' +
-      '<div style="font-size:18px;margin-bottom:6px">'+emoji+'</div>' +
-      '<div style="font-family:Manrope,sans-serif;font-size:26px;font-weight:800;color:var(--tx);line-height:1;font-variant-numeric:tabular-nums">'+num+'</div>' +
-      '<div style="font-size:11px;font-weight:600;color:var(--tm);margin-top:3px">'+lbl+'</div>' +
+      '<div style="font-size:16px;margin-bottom:5px">'+emoji+'</div>' +
+      '<div style="font-family:Manrope,sans-serif;font-size:22px;font-weight:800;color:var(--tx);line-height:1;font-variant-numeric:tabular-nums">'+num+'</div>' +
+      '<div style="font-size:10.5px;font-weight:600;color:var(--tm);margin-top:3px;line-height:1.3">'+lbl+'</div>' +
     '</div>';
   }
 
   corpo.innerHTML =
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">' +
       kpi('#14b8a6','📋',tot,'Total') +
       kpi('#f59e0b','⏳',ag,'Aguardando') +
       kpi('#5b9bd5','🎨',pr,'Em Produção') +
       kpi('#34d399','✅',(en+co),'Entregues / Concluídas') +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px">' +
-      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
-        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:14px">Solicitações por Mês <span style="font-family:Inter,sans-serif;font-size:11px;font-weight:500;color:var(--ts)">últimos 6 meses</span></div>' +
-        '<div style="position:relative;height:160px"><canvas id="g-dash-chart"></canvas></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px">' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:12px">Solicitações por Mês <span style="font-family:Inter,sans-serif;font-size:11px;font-weight:500;color:var(--ts)">últimos 6 meses</span></div>' +
+        '<div style="position:relative;height:150px"><canvas id="g-dash-chart"></canvas></div>' +
       '</div>' +
-      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
-        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:14px">Top Congregações</div>' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+        '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:12px">Top Congregações</div>' +
         '<div style="display:flex;flex-direction:column;gap:7px">'+congHtml+'</div>' +
       '</div>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
-      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
         '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px">Últimas Solicitações</div>' +
         ultiHtml +
       '</div>' +
-      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
+      '<div style="background:var(--sur);border:1.5px solid var(--bor);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,42,44,.06)">' +
         '<div style="font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px">Últimas Alterações</div>' +
         auditHtml +
       '</div>' +
