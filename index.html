@@ -1091,6 +1091,7 @@ select.st-sel{min-width:128px}
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="pok" style="flex:1" onclick="salvarEdicao()">💾 Salvar Alterações</button>
       <button class="pok" style="flex:1;background:transparent;color:var(--tm);border:1.5px solid var(--bor)" onclick="document.getElementById('m-editar').classList.remove('on')">Cancelar</button>
+      <button class="pok" id="btn-reenviar-email" style="flex:1;background:linear-gradient(135deg,#0d9488,#14b8a6)" onclick="reenviarEmailEdicao()">📧 Reenviar Email</button>
     </div>
   </div>
 </div>
@@ -3256,6 +3257,48 @@ function abrirEditar(id){
   document.getElementById('e-status').value       = r.status        || 'Aguardando';
   document.getElementById('m-editar-err').style.display = 'none';
   document.getElementById('m-editar').classList.add('on');
+}
+
+async function reenviarEmailEdicao(){
+  if(!_editarId) return;
+  var btn = document.getElementById('btn-reenviar-email');
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Enviando…';
+  try {
+    var row = _gSolic.find(function(s){ return s.id===_editarId; });
+    if(!row) throw new Error('Solicitação não encontrada');
+    var resp = await fetch(SUPA_URL+'/functions/v1/enviar-notificacao', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},
+      body: JSON.stringify({
+        tipo: 'nova_solicitacao',
+        solicitacao_id: row.id,
+        num: row.num || row.id,
+        nome_trabalho: row.nome_trabalho || '',
+        congregacao:   row.congregacao || '',
+        solicitante:   row.solicitante || '',
+        data_solic:    row.data_solic || '',
+        local:         row.local || '',
+        tema:          row.tema || '',
+        referencia:    row.referencia || '',
+        datas:         row.datas || '',
+        pregadores:    row.pregadores || '',
+        paleta_cores:  row.paleta_cores || '',
+        mais_info:     row.mais_info || '',
+        status:        row.status || 'Aguardando'
+      })
+    });
+    var json = await resp.json();
+    if(!resp.ok || json.error) throw new Error(json.error || 'Erro desconhecido');
+    toast('Email reenviado com sucesso! ✉️');
+    document.getElementById('m-editar').classList.remove('on');
+  } catch(e) {
+    toast('Erro ao reenviar: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
 }
 
 async function salvarEdicao(){
