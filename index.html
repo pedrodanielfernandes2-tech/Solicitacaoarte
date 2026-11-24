@@ -1048,8 +1048,8 @@ select.st-sel{min-width:128px}
     <div class="login-field"><label>Congregação</label>
       <select id="e-congregacao" style="background:var(--sur2);border:1.5px solid var(--bor);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;width:100%">
         <option value="">Selecione…</option>
-        <option>Cavalli</option><option>Colinas São José</option><option>Estiva</option>
-        <option>Igreja Sede</option><option>Lago Azul</option><option>Monterrey</option>
+        <option>Sede</option><option>Cavalli</option><option>Colinas São José</option>
+        <option>Estiva</option><option>Lago Azul</option><option>Monterrey</option>
       </select>
     </div>
     <div class="login-field"><label>Solicitante</label>
@@ -1088,10 +1088,10 @@ select.st-sel{min-width:128px}
       </select>
     </div>
     <div id="m-editar-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);padding:10px;font-size:13px;color:#dc2626;margin-bottom:10px"></div>
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="pok" style="flex:1" onclick="salvarEdicao()">💾 Salvar Alterações</button>
-      <button class="pok" style="flex:1;background:transparent;color:var(--tm);border:1.5px solid var(--bor)" onclick="document.getElementById('m-editar').classList.remove('on')">Cancelar</button>
-      <button class="pok" id="btn-reenviar-email" style="flex:1;background:linear-gradient(135deg,#0d9488,#14b8a6)" onclick="reenviarEmailEdicao()">📧 Reenviar Email</button>
+    <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+      <button class="pok" style="flex:1;min-width:120px" onclick="salvarEdicao()">💾 Salvar</button>
+      <button class="pok" style="flex:1;min-width:100px;background:transparent;color:var(--tm);border:1.5px solid var(--bor)" onclick="document.getElementById('m-editar').classList.remove('on')">Cancelar</button>
+      <button class="pok" id="btn-reenviar-email" style="width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6)" onclick="reenviarEmailEdicao()">📧 Reenviar Email</button>
     </div>
   </div>
 </div>
